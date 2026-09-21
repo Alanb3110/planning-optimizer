@@ -1,0 +1,6 @@
+matplotlib>=3.8,<4
+jsonschema>=4.20,<5
+numpy>=1.26,<3
+openpyxl>=3.1,<4
+scipy>=1.11,<2
+streamlit>=1.41,<2
