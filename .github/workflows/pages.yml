@@ -2,7 +2,7 @@ name: Deploy browser application to GitHub Pages
 
 on:
   push:
-    branches: [web-v1]
+    branches: [main]
   workflow_dispatch:
 
 permissions:
