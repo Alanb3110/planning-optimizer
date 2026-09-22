@@ -1,3 +1,6 @@
+import { useState, type CSSProperties } from "react";
+import { downloadScheduleBundle, type RunSettings } from "../lib/exports";
+import type { WorkbookImportResult } from "../lib/model";
 import type {
   ScheduleResult,
   ScheduledActivity,
@@ -10,6 +13,8 @@ import type {
 interface ScheduleResultsProps {
   project: SchedulingProject;
   result: ScheduleResult;
+  validation: WorkbookImportResult;
+  settings: RunSettings;
   solveDurationMs: number | null;
 }
 
@@ -123,7 +128,7 @@ function GanttChart({ rows, result }: { rows: ActivityRow[]; result: ScheduleRes
         </div>
       </div>
       <div className="gantt-scroll" tabIndex={0} aria-label="Scrollable activity Gantt">
-        <div className="gantt" style={{ "--chart-width": `${Math.max(720, roundedEnd * 5)}px` } as React.CSSProperties}>
+        <div className="gantt" style={{ "--chart-width": `${Math.max(720, roundedEnd * 5)}px` } as CSSProperties}>
           <div className="gantt-axis-label">System / package / activity</div>
           <div className="gantt-axis" aria-hidden="true">
             {ticks.map((tick) => (
@@ -138,14 +143,14 @@ function GanttChart({ rows, result }: { rows: ActivityRow[]; result: ScheduleRes
             return (
               <div className="gantt-entry" key={activity.activity_id}>
                 {startsSystem && (
-                  <div className="gantt-system" style={{ "--system-color": color } as React.CSSProperties}>
+                  <div className="gantt-system" style={{ "--system-color": color } as CSSProperties}>
                     <span>System</span>
                     <strong>{displayName(system, system.system_id)}</strong>
                     <code>{system.system_id}</code>
                   </div>
                 )}
                 {startsPackage && (
-                  <div className="gantt-package" style={{ "--system-color": color } as React.CSSProperties}>
+                  <div className="gantt-package" style={{ "--system-color": color } as CSSProperties}>
                     <span>Package</span>
                     <strong>{displayName(packageItem, packageItem.package_id)}</strong>
                     <code>{packageItem.package_id}</code>
@@ -156,7 +161,7 @@ function GanttChart({ rows, result }: { rows: ActivityRow[]; result: ScheduleRes
                     <strong>{displayName(activity, activity.activity_id)}</strong>
                     <span>{activity.activity_id} · {activity.duration_h} h</span>
                   </div>
-                  <div className="gantt-track" style={{ "--system-color": color } as React.CSSProperties}>
+                  <div className="gantt-track" style={{ "--system-color": color } as CSSProperties}>
                     {ticks.map((tick) => (
                       <i className="gantt-gridline" key={tick} style={{ left: `${(tick / roundedEnd) * 100}%` }} />
                     ))}
@@ -179,7 +184,8 @@ function GanttChart({ rows, result }: { rows: ActivityRow[]; result: ScheduleRes
   );
 }
 
-export function ScheduleResults({ project, result, solveDurationMs }: ScheduleResultsProps) {
+export function ScheduleResults({ project, result, validation, settings, solveDurationMs }: ScheduleResultsProps) {
+  const [downloadedFile, setDownloadedFile] = useState<string | null>(null);
   const rows = buildRows(project, result);
   const activeCalendar = project.calendars.find(
     (calendar) => calendar.calendar_id === project.metadata.active_calendar,
@@ -194,9 +200,29 @@ export function ScheduleResults({ project, result, solveDurationMs }: ScheduleRe
       offsetH,
     }))
     .sort((left, right) => left.offsetH - right.offsetH || left.gateId.localeCompare(right.gateId));
+  const downloadBundle = () => {
+    setDownloadedFile(downloadScheduleBundle({
+      project,
+      result,
+      validation,
+      settings,
+      solveDurationMs,
+    }));
+  };
 
   return (
     <div className="schedule-output" aria-live="polite">
+      <section className="export-toolbar" aria-label="Local result export">
+        <div>
+          <span className="section-kicker">Local export</span>
+          <strong>Download the complete result bundle</strong>
+          <small>ZIP generated in this browser. No project data is uploaded.</small>
+        </div>
+        <div>
+          <button className="export-button" type="button" onClick={downloadBundle}>Download result ZIP</button>
+          {downloadedFile && <span className="download-status" role="status">Downloaded {downloadedFile}</span>}
+        </div>
+      </section>
       <section className="result-metrics" aria-label="Schedule summary">
         <div className="metric primary">
           <span>Completion date</span>

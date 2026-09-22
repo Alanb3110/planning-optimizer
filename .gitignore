@@ -25,9 +25,14 @@ private_terms.txt
 *.xlsx
 *.xls
 *.csv
+*.zip
 *.parquet
 *.sqlite
 *.db
+gantt_activities.svg
+validation_report.json
+normalized_project.json
+run_summary.json
 
 !examples/synthetic_project.xlsx
 !web/public/synthetic_project.xlsx

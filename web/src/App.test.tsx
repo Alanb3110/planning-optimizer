@@ -89,10 +89,15 @@ describe("AIT Planning Optimizer workspace", () => {
     expect(screen.getByTitle("ROUTE_SERVICES: H+56 to H+58")).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Activities" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Gates" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Download result ZIP" })).toBeInTheDocument();
     expect(screen.getByText("HiGHS test: optimal", { exact: false })).toBeInTheDocument();
     expect(screen.getByLabelText("Scrollable activity Gantt")).toHaveAttribute("tabindex", "0");
     expect(screen.getByLabelText("Scrollable activity results table")).toHaveAttribute("tabindex", "0");
     expect(screen.getByLabelText("Scrollable gate results table")).toHaveAttribute("tabindex", "0");
+    fireEvent.click(screen.getByRole("button", { name: "Clear local data" }));
+    expect(screen.queryByText("Completion date")).not.toBeInTheDocument();
+    expect(screen.getByText("No workbook loaded")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Calculate schedule" })).toBeDisabled();
   });
 
   it("announces progress and allows the local solve to be cancelled", async () => {

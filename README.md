@@ -1,83 +1,87 @@
-# Planning Optimizer
+# AIT Planning Optimizer
 
-A small local-first prototype for resource-constrained project scheduling. It loads an Excel workbook, validates the planning model, solves an hourly mixed-integer schedule, and writes CSV diagnostics and Gantt charts.
+AIT Planning Optimizer is a static, browser-only application for validating and scheduling AIT and launch-site integration projects. It imports a V1 `.xlsx` workbook, validates the normalized model, solves the hourly MILP with HiGHS WebAssembly in a Web Worker, and displays Activity and Gate results.
 
-The repository contains only code, a generic schema, and a neutral synthetic example. Keep operational project inputs and generated results outside the repository.
+The Python prototype remains in this repository as a development reference and regression oracle. End users do not need Python or a backend service.
 
-## Implemented in V1
+## Browser application
 
-- Systems, packages, activities, zero-duration gates, and Finish-to-Start dependencies with optional elapsed-time lag.
-- System arrival constraints and explicit early-enabler activities.
-- `WORK_TIME` and `ELAPSED_TIME` durations.
-- Interruptible work across calendar gaps and continuous non-interruptible work.
-- Activity, resource, and zone calendars, including adjacent and cross-midnight shifts.
-- Resource capacity, zone capacity, and exclusive zone occupancy.
-- Lexicographic milestone priorities, always including project completion.
-- Structural, referential, semantic, and post-solve validation.
-- Schedule, gate, diagnostic, and Gantt outputs.
+Implemented capabilities include:
 
-## Local data layout
+- local `.xlsx` import and a fictitious synthetic example;
+- JSON Schema and semantic validation;
+- System arrivals, early enablers, Finish-to-Start dependencies and elapsed lags;
+- `WORK_TIME` and `ELAPSED_TIME` Activities;
+- preemptible and non-preemptible execution;
+- Activity, Resource and Zone calendars;
+- Resource and Zone capacities and Zone exclusivity;
+- zero-duration Gates and lexicographic milestone priorities;
+- local HiGHS WebAssembly optimization in a Worker;
+- Activity Gantt, Activity table and Gate table;
+- local ZIP result export.
 
-Recommended layout:
+## Run locally
 
-```text
-~/code/planning-optimizer/       # this public repository
-~/planning-data/inputs/          # private workbooks
-~/planning-data/outputs/         # private schedules and diagnostics
-```
-
-Do not copy private workbooks into the repository, even when a path is ignored by Git.
-
-## Installation
-
-Python 3.11 or newer is required.
+Node.js 20 or newer is recommended.
 
 ```bash
-python -m venv .venv
-source .venv/bin/activate        # Windows: .venv\Scripts\activate
-python -m pip install -e .
+cd web
+npm ci
+npm run dev
 ```
 
-## Run the neutral synthetic example
+Open the local URL printed by Vite. Select a V1 workbook or click **Load synthetic example**, review validation, set the planning horizon and solver time limit, then click **Calculate schedule**. A planning horizon of `0` requests automatic estimation.
+
+Verification commands:
 
 ```bash
-planning-optimizer audit \
-  --input examples/synthetic_project.xlsx
-
-planning-optimizer schedule \
-  --input examples/synthetic_project.xlsx \
-  --output /tmp/planning-optimizer-demo
+cd web
+npm test
+npm run build
 ```
 
-## Start the local Dashboard
+The static production files are written to `web/dist/`. Vite uses a relative base path so the build can run below a GitHub Pages repository path. Deployment is intentionally configured separately.
+
+## Local result bundle
+
+After a successful solve, **Download result ZIP** creates a ZIP entirely in the browser. It contains:
+
+- `schedule.csv`;
+- `gates.csv`;
+- `diagnostics.csv` when structured diagnostics are available;
+- `validation_report.json`;
+- `normalized_project.json`;
+- `run_summary.json`;
+- `gantt_activities.svg`.
+
+The source workbook is never modified. The downloaded ZIP is a user-controlled copy outside application memory; **Clear local data** cannot delete files already downloaded by the browser.
+
+## Privacy and data lifecycle
+
+1. A selected workbook is read into page memory.
+2. Parsing, normalization and validation run locally.
+3. The normalized model is copied to the same-origin scheduling Worker.
+4. HiGHS builds and solves the model locally using the bundled WebAssembly asset.
+5. Views and exports are generated locally.
+6. **Clear local data**, page refresh or tab closure removes the imported model and calculated result from application memory.
+
+The runtime has no backend, database, analytics, telemetry, account, external project-data API or service worker. Project data is not written to `localStorage`, `sessionStorage`, IndexedDB or Cache Storage. Runtime asset requests are restricted to the application origin by the Content Security Policy. The application issues no `POST`, `PUT`, `PATCH` or `DELETE` requests.
+
+The fictitious example is a same-origin static asset. Build tools and the npm registry may be used during development; they are not part of the production data path.
+
+See [SECURITY.md](SECURITY.md) for the threat model, controls and reporting guidance.
+
+## Public repository policy
+
+This repository may contain code, schemas, documentation, tests and fictitious examples only. Keep real project workbooks, generated operational schedules, supplier dates, organization-specific identifiers, credentials and local configuration outside the repository.
+
+Run the publication check before publishing changes:
 
 ```bash
-planning-optimizer dashboard
-```
-
-The application binds to `127.0.0.1` and opens at `http://127.0.0.1:8501`. Select a workbook with the file picker, review its validation report, and calculate the schedule. Uploaded input stays in process memory. Generated files are created in an automatically deleted temporary directory and retained in memory only for preview and download.
-
-For private data, replace `--input` and `--output` with paths outside the clone.
-
-Generated outputs are:
-
-- `schedule.csv`
-- `gates.csv`
-- `diagnostics.csv`
-- `validation_report.json`
-- `normalized_project.json`
-- `run_summary.json`
-- `gantt.png`
-- `gantt_activities.png`
-
-## Tests and publication check
-
-```bash
-python -m unittest discover -s tests -v
 python scripts/check_public_data.py --root .
 ```
 
-An additional private denylist can be supplied without storing it in the repository:
+An organization-specific denylist may be supplied from outside the clone:
 
 ```bash
 python scripts/check_public_data.py \
@@ -85,17 +89,20 @@ python scripts/check_public_data.py \
   --denylist /absolute/path/to/private_terms.txt
 ```
 
-The denylist contains one case-insensitive term per line. Blank lines and lines beginning with `#` are ignored.
+## Deliberate V1 limits
 
-## Deliberate limits
-
-- Time is discretized to 1 h. Durations, lags, arrivals, and shift boundaries must align to the grid.
-- Interruptible work may pause at calendar gaps. Arbitrary extra mid-shift fragmentation is not yet modeled.
-- Resource substitutions and calendar exceptions are represented in the data model but are not optimized in this prototype.
-- The time-indexed MILP is intended to prove the model on small datasets, not yet to scale to a large operational plan.
-- The first interface is a local Streamlit Dashboard; there is no hosted backend.
+- Time is discretized to a 1 h grid.
+- Nominal durations are used; uncertainty modelling is deferred.
+- Resource substitutions and calendar exceptions are represented but not optimized.
+- The time-indexed MILP targets small and representative planning models.
+- Workbook inputs are limited to 20 MiB and should come from trusted sources.
+- Result downloads are not encrypted by the application; protect them according to the project classification.
 
 See [docs/product_spec_v1.md](docs/product_spec_v1.md) for the functional contract and [schema/planning_optimizer_schema_v1.json](schema/planning_optimizer_schema_v1.json) for the reference data model.
+
+## Python reference
+
+The Python package and Streamlit dashboard are retained for regression comparison. They are not required by the web application. Python-specific installation and CLI commands remain available through `pyproject.toml` and the package help.
 
 ## License
 

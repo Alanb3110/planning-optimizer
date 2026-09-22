@@ -12,6 +12,8 @@ import { validateProject } from "./validation";
 type WorkbookSource = ArrayBuffer | Uint8Array | Blob;
 type CellValue = string | number | boolean | Date | null | undefined;
 
+const MAX_WORKBOOK_BYTES = 20 * 1024 * 1024;
+
 interface TableSheetDefinition {
   sheetName: string;
   collection: TableCollectionKey;
@@ -405,6 +407,10 @@ function normalizeProject(data: NormalizedProject, issues: ValidationIssue[]) {
 }
 
 async function sourceBytes(source: WorkbookSource): Promise<ArrayBuffer | Uint8Array> {
+  const byteLength = source instanceof Blob ? source.size : source.byteLength;
+  if (byteLength > MAX_WORKBOOK_BYTES) {
+    throw new Error("Workbook exceeds the 20 MiB browser import limit.");
+  }
   return source instanceof Blob ? source.arrayBuffer() : source;
 }
 
@@ -420,7 +426,7 @@ export async function importWorkbook(
     const workbook = XLSX.read(await sourceBytes(source), {
       type: "array",
       cellDates: false,
-      cellFormula: true,
+      cellFormula: false,
     });
     sheetNames = workbook.SheetNames;
 

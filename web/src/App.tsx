@@ -1,5 +1,7 @@
 import { type ChangeEvent, useEffect, useId, useRef, useState } from "react";
 import { ScheduleResults } from "./components/ScheduleResults";
+import type { RunSettings } from "./lib/exports";
+import { fetchLocalArrayBuffer } from "./lib/localAsset";
 import type { ValidationIssue, WorkbookImportResult } from "./lib/model";
 import { solveScheduleInWorker } from "./lib/scheduler/solverClient";
 import { asSchedulingProject, type ScheduleResult, type SolveProgress } from "./lib/scheduler/types";
@@ -33,6 +35,7 @@ function App() {
   const [solveProgress, setSolveProgress] = useState<SolveProgress | null>(null);
   const [solveError, setSolveError] = useState<string | null>(null);
   const [solveDurationMs, setSolveDurationMs] = useState<number | null>(null);
+  const [lastRunSettings, setLastRunSettings] = useState<RunSettings | null>(null);
   const [horizonDays, setHorizonDays] = useState("0");
   const [timeLimitS, setTimeLimitS] = useState("120");
   const solveAbortRef = useRef<AbortController | null>(null);
@@ -45,6 +48,7 @@ function App() {
     setSolveProgress(null);
     setSolveError(null);
     setSolveDurationMs(null);
+    setLastRunSettings(null);
   };
 
   useEffect(() => () => solveAbortRef.current?.abort(), []);
@@ -74,12 +78,8 @@ function App() {
     setIsLoading(true);
     setLoadError(null);
     try {
-      const response = await fetch(`${import.meta.env.BASE_URL}${EXAMPLE_NAME}`, {
-        method: "GET",
-        credentials: "same-origin",
-      });
-      if (!response.ok) throw new Error(`Could not load the synthetic example (${response.status}).`);
-      setResult(await importWorkbook(await response.arrayBuffer(), EXAMPLE_NAME));
+      const workbook = await fetchLocalArrayBuffer(`${import.meta.env.BASE_URL}${EXAMPLE_NAME}`);
+      setResult(await importWorkbook(workbook, EXAMPLE_NAME));
     } catch (error) {
       setResult(null);
       setLoadError(error instanceof Error ? error.message : "The synthetic example could not be loaded.");
@@ -122,6 +122,7 @@ function App() {
       );
       setSchedule(nextSchedule);
       setSolveDurationMs(performance.now() - startedAt);
+      setLastRunSettings({ horizonDays: horizonValue, timeLimitS: timeLimitValue });
       setSolveProgress(null);
     } catch (error) {
       if (!(error instanceof DOMException && error.name === "AbortError")) {
@@ -261,7 +262,15 @@ function App() {
         {result?.isValid && solveError && (
           <div className={`terminal-state ${currentErrorKind}`} role="alert"><span className="state-icon" aria-hidden="true">{currentErrorKind === "infeasible" ? "∅" : "!"}</span><div><span className="state-code">{currentErrorKind === "infeasible" ? "NO FEASIBLE SCHEDULE" : "SOLVER ERROR"}</span><h2>{currentErrorKind === "infeasible" ? "The model is infeasible within these settings" : "The schedule could not be calculated"}</h2><p>{solveError}</p><button className="secondary-button retry-button" type="button" onClick={calculateSchedule}>Try again</button></div></div>
         )}
-        {project && schedule && <ScheduleResults project={project} result={schedule} solveDurationMs={solveDurationMs} />}
+        {project && schedule && result && lastRunSettings && (
+          <ScheduleResults
+            project={project}
+            result={schedule}
+            validation={result}
+            settings={lastRunSettings}
+            solveDurationMs={solveDurationMs}
+          />
+        )}
       </section>
     </main>
   );

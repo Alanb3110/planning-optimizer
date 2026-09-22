@@ -8,9 +8,20 @@ import sys
 import zipfile
 
 
-ALLOWED_DATA_FILES = {Path("examples/synthetic_project.xlsx")}
+ALLOWED_DATA_FILES = {
+    Path("examples/synthetic_project.xlsx"),
+    Path("web/public/synthetic_project.xlsx"),
+}
 BLOCKED_DATA_SUFFIXES = {".csv", ".db", ".parquet", ".sqlite", ".xls", ".xlsx"}
-SKIP_DIRECTORIES = {".git", ".venv", "__pycache__", "build", "dist"}
+SKIP_DIRECTORIES = {
+    ".git",
+    ".venv",
+    "__pycache__",
+    "build",
+    "coverage",
+    "dist",
+    "node_modules",
+}
 SUSPICIOUS_ARCHIVE_PARTS = (
     "connections",
     "customxml/",

@@ -90,4 +90,16 @@ describe("browser workbook import", () => {
     expect(sendBeaconSpy).not.toHaveBeenCalled();
     expect(localStorageSpy).not.toHaveBeenCalled();
   });
+
+  it("rejects an oversized workbook before parsing", async () => {
+    const oversized = new Blob([new ArrayBuffer(20 * 1024 * 1024 + 1)]);
+    const result = await importWorkbook(oversized, "oversized.xlsx");
+    expect(result.isValid).toBe(false);
+    expect(result.issues).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        code: "WORKBOOK_READ_FAILED",
+        message: expect.stringContaining("20 MiB browser import limit"),
+      }),
+    ]));
+  });
 });
