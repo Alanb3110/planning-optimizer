@@ -42,6 +42,8 @@ npm run build
 
 The static production files are written to `web/dist/`. Vite uses a relative base path so the build can run below a GitHub Pages repository path. Deployment is intentionally configured separately.
 
+The `web-v1` branch includes a GitHub Actions workflow that tests and builds `web/`, then publishes only `web/dist/` to GitHub Pages. In the repository Pages settings, select **GitHub Actions** as the deployment source; selecting a branch serves the repository root and its README rather than the Vite build.
+
 ## Local result bundle
 
 After a successful solve, **Download result ZIP** creates a ZIP entirely in the browser. It contains:

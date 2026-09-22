@@ -41,6 +41,7 @@ function readStoredZip(bytes: Uint8Array): Map<string, string> {
 describe("private browser-only example workflow", () => {
   it("ships a same-origin CSP with Worker and WebAssembly permissions only", async () => {
     const html = await readFile(resolve(process.cwd(), "index.html"), "utf8");
+    const validationSource = await readFile(resolve(process.cwd(), "src/lib/validation.ts"), "utf8");
     expect(html).toContain("default-src 'self'");
     expect(html).toContain("connect-src 'self'");
     expect(html).toContain("script-src 'self' 'wasm-unsafe-eval'");
@@ -48,6 +49,9 @@ describe("private browser-only example workflow", () => {
     expect(html).toContain("object-src 'none'");
     expect(html).toContain("form-action 'none'");
     expect(html).not.toMatch(/https?:\/\/(?!www\.w3\.org\/1999\/xhtml)/);
+    expect(html).not.toContain("'unsafe-eval'");
+    expect(validationSource).toContain("validator.generated");
+    expect(validationSource).not.toContain("new Ajv");
   });
 
   it("loads, validates, solves and exports without external, mutating or persistent operations", async () => {

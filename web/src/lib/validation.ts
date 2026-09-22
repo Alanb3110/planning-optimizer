@@ -1,11 +1,8 @@
-import Ajv2020, { type ErrorObject } from "ajv/dist/2020.js";
-import addFormats from "ajv-formats";
-import projectSchema from "../schema/planning_optimizer_schema_v1.json";
+import type { ErrorObject, ValidateFunction } from "ajv";
+import generatedSchemaValidator from "../schema/planning_optimizer_schema_v1.validator.generated";
 import type { NormalizedProject, NormalizedRecord, ValidationIssue } from "./model";
 
-const ajv = new Ajv2020({ allErrors: true, strict: false });
-addFormats(ajv);
-const validateAgainstSchema = ajv.compile(projectSchema);
+const validateAgainstSchema = generatedSchemaValidator as ValidateFunction<NormalizedProject>;
 
 const asString = (value: unknown): string | undefined =>
   typeof value === "string" && value.length > 0 ? value : undefined;
