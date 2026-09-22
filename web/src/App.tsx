@@ -38,6 +38,7 @@ function App() {
   const [lastRunSettings, setLastRunSettings] = useState<RunSettings | null>(null);
   const [horizonDays, setHorizonDays] = useState("0");
   const [timeLimitS, setTimeLimitS] = useState("120");
+  const [theme, setTheme] = useState<"light" | "dark">("light");
   const solveAbortRef = useRef<AbortController | null>(null);
 
   const resetSchedule = () => {
@@ -52,6 +53,10 @@ function App() {
   };
 
   useEffect(() => () => solveAbortRef.current?.abort(), []);
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme;
+    return () => { delete document.documentElement.dataset.theme; };
+  }, [theme]);
 
   const processWorkbook = async (source: Blob | ArrayBuffer, fileName: string) => {
     resetSchedule();
@@ -153,9 +158,14 @@ function App() {
           <div className="brand-mark" aria-hidden="true"><span /><span /><span /></div>
           <div><span className="product-code">AIT / SCHEDULING</span><h1>AIT Planning Optimizer</h1></div>
         </div>
-        <div className="privacy-note" role="note">
-          <span className="privacy-dot" aria-hidden="true" />
-          <div><strong>Local processing only</strong><span>No upload · no persistence · no external API</span></div>
+        <div className="header-actions">
+          <div className="privacy-note" role="note">
+            <span className="privacy-dot" aria-hidden="true" />
+            <div><strong>Local processing only</strong><span>No upload · no persistence · no external API</span></div>
+          </div>
+          <button className="theme-toggle" type="button" aria-pressed={theme === "dark"} onClick={() => setTheme(theme === "light" ? "dark" : "light")}>
+            {theme === "light" ? "Dark theme" : "Light theme"}
+          </button>
         </div>
       </header>
 

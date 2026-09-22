@@ -144,16 +144,20 @@ function GanttChart({ rows, result }: { rows: ActivityRow[]; result: ScheduleRes
               <div className="gantt-entry" key={activity.activity_id}>
                 {startsSystem && (
                   <div className="gantt-system" style={{ "--system-color": color } as CSSProperties}>
-                    <span>System</span>
-                    <strong>{displayName(system, system.system_id)}</strong>
-                    <code>{system.system_id}</code>
+                    <div className="gantt-group-label">
+                      <span>System</span>
+                      <strong>{displayName(system, system.system_id)}</strong>
+                      <code>{system.system_id}</code>
+                    </div>
                   </div>
                 )}
                 {startsPackage && (
                   <div className="gantt-package" style={{ "--system-color": color } as CSSProperties}>
-                    <span>Package</span>
-                    <strong>{displayName(packageItem, packageItem.package_id)}</strong>
-                    <code>{packageItem.package_id}</code>
+                    <div className="gantt-group-label">
+                      <span>Package</span>
+                      <strong>{displayName(packageItem, packageItem.package_id)}</strong>
+                      <code>{packageItem.package_id}</code>
+                    </div>
                   </div>
                 )}
                 <div className="gantt-row">

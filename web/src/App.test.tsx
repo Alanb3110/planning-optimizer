@@ -59,6 +59,25 @@ describe("AIT Planning Optimizer workspace", () => {
     expect(screen.getByText(/waiting for input/i)).toBeInTheDocument();
   });
 
+  it("switches themes without persisting project data or changing the loaded workbook", async () => {
+    vi.mocked(importWorkbook).mockResolvedValue(importedWorkbook);
+    const { unmount } = render(<App />);
+    const toggle = screen.getByRole("button", { name: "Dark theme" });
+    expect(toggle).toHaveAttribute("aria-pressed", "false");
+    fireEvent.click(toggle);
+    expect(document.documentElement).toHaveAttribute("data-theme", "dark");
+    expect(screen.getByRole("button", { name: "Light theme" })).toHaveAttribute("aria-pressed", "true");
+    fireEvent.change(screen.getByLabelText("Select a local .xlsx file"), {
+      target: { files: [new File(["synthetic"], "synthetic_project.xlsx")] },
+    });
+    expect(await screen.findByText("Workbook accepted")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Light theme" }));
+    expect(document.documentElement).toHaveAttribute("data-theme", "light");
+    expect(screen.getByText("Workbook accepted")).toBeInTheDocument();
+    unmount();
+    expect(document.documentElement).not.toHaveAttribute("data-theme");
+  });
+
   it("connects validated input and settings to the Worker and renders the full result", async () => {
     vi.mocked(importWorkbook).mockResolvedValue(importedWorkbook);
     vi.mocked(solveScheduleInWorker).mockImplementation(async (_project, _options, onProgress) => {
@@ -92,6 +111,7 @@ describe("AIT Planning Optimizer workspace", () => {
     expect(screen.getByRole("button", { name: "Download result ZIP" })).toBeInTheDocument();
     expect(screen.getByText("HiGHS test: optimal", { exact: false })).toBeInTheDocument();
     expect(screen.getByLabelText("Scrollable activity Gantt")).toHaveAttribute("tabindex", "0");
+    expect(screen.getAllByText("Skid system").some((item) => item.closest(".gantt-group-label"))).toBe(true);
     expect(screen.getByLabelText("Scrollable activity results table")).toHaveAttribute("tabindex", "0");
     expect(screen.getByLabelText("Scrollable gate results table")).toHaveAttribute("tabindex", "0");
     fireEvent.click(screen.getByRole("button", { name: "Clear local data" }));
