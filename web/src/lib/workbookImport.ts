@@ -177,7 +177,7 @@ function readTable(
 function readMetadata(sheet: XLSX.WorkSheet, issues: ValidationIssue[]): NormalizedRecord {
   const rows = sheetRows(sheet);
   const headerIndex = rows.slice(0, 30).findIndex((row) =>
-    row.some((value) => typeof value === "string" && value.trim() === "Field"),
+    row.some((value) => typeof value === "string" && value.trim().toLowerCase() === "field"),
   );
   if (headerIndex < 0) {
     addIssue(issues, "error", "MISSING_HEADER", "Could not find header 'Field'.", "Metadata");

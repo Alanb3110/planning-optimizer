@@ -374,6 +374,47 @@ h2 {
 .validation-banner.invalid { color: #762f2b; background: #fae9e7; }
 .validation-banner span { opacity: 0.78; }
 
+.schedule-panel {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.schedule-button {
+  width: 100%;
+  padding: 0.85rem 1rem;
+  border: 1px solid #0f6f62;
+  border-radius: 10px;
+  color: #fff;
+  background: #0f6f62;
+  font-weight: 750;
+  cursor: pointer;
+}
+
+.schedule-button:hover:not(:disabled) { background: #0b5a50; }
+.schedule-button:disabled { opacity: 0.58; cursor: wait; }
+
+.schedule-panel p {
+  margin: 0;
+  color: #5b6a70;
+  font-size: 0.8rem;
+}
+
+.schedule-panel .solve-error { color: #8a332e; }
+
+.schedule-result {
+  display: flex;
+  gap: 0.5rem 1rem;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.8rem 0.9rem;
+  border-radius: 9px;
+  color: #164c40;
+  background: #e7f5f0;
+  font-size: 0.82rem;
+}
+
+.schedule-result span { opacity: 0.75; }
+
 .issue-group {
   min-width: 0;
 }

@@ -39,7 +39,7 @@ function workbookWithCycle(): ArrayBuffer {
     defval: null,
   });
   dependencyRows.push([
-    "TEST_CYCLE", "ACTIVITY", "MGF_IQC", "ACTIVITY", "MGF_RECEIVE", "FS", 0, true,
+    "TEST_CYCLE", "GATE", "PROJECT_COMPLETE", "ACTIVITY", "PREPARE_FOUNDATION", "FS", 0, true,
     "Fictitious regression cycle",
   ]);
   workbook.Sheets.Dependencies = XLSX.utils.aoa_to_sheet(dependencyRows);
@@ -51,10 +51,10 @@ describe("browser workbook import", () => {
     const result = await importWorkbook(syntheticWorkbook, "synthetic_project.xlsx");
     expect(result.isValid).toBe(true);
     expect(result.issues.filter((issue) => issue.severity === "error")).toEqual([]);
-    expect(result.summary).toEqual({ systems: 6, packages: 15, activities: 54, gates: 17 });
-    expect(result.data.metadata.project_start).toMatch(/T00:00:00\+04:00$/);
-    expect(result.data.calendars[0].weekend_days).toEqual(["FRI", "SAT"]);
-    expect(result.data.activities.find((row) => row.activity_id === "LOX_CURE")?.enabled).toBe(true);
+    expect(result.summary).toEqual({ systems: 2, packages: 3, activities: 6, gates: 3 });
+    expect(result.data.metadata.project_start).toMatch(/T00:00:00\+00:00$/);
+    expect(result.data.calendars[0].weekend_days).toEqual(["SAT", "SUN"]);
+    expect(result.data.activities.find((row) => row.activity_id === "ROUTE_SERVICES")?.enabled).toBe(true);
   });
 
   it("rejects an incomplete workbook without throwing", async () => {

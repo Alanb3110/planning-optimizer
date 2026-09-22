@@ -1,5 +1,7 @@
-import { type ChangeEvent, useId, useRef, useState } from "react";
+import { type ChangeEvent, useEffect, useId, useRef, useState } from "react";
 import type { ValidationIssue, WorkbookImportResult } from "./lib/model";
+import { solveScheduleInWorker } from "./lib/scheduler/solverClient";
+import { asSchedulingProject, type ScheduleResult } from "./lib/scheduler/types";
 import { importWorkbook } from "./lib/workbookImport";
 
 const EXAMPLE_NAME = "synthetic_project.xlsx";
@@ -14,8 +16,25 @@ function App() {
   const [result, setResult] = useState<WorkbookImportResult | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [schedule, setSchedule] = useState<ScheduleResult | null>(null);
+  const [isSolving, setIsSolving] = useState(false);
+  const [solveStatus, setSolveStatus] = useState<string | null>(null);
+  const [solveError, setSolveError] = useState<string | null>(null);
+  const solveAbortRef = useRef<AbortController | null>(null);
+
+  const resetSchedule = () => {
+    solveAbortRef.current?.abort();
+    solveAbortRef.current = null;
+    setSchedule(null);
+    setIsSolving(false);
+    setSolveStatus(null);
+    setSolveError(null);
+  };
+
+  useEffect(() => () => solveAbortRef.current?.abort(), []);
 
   const processWorkbook = async (source: Blob | ArrayBuffer, fileName: string) => {
+    resetSchedule();
     setIsLoading(true);
     setLoadError(null);
     try {
@@ -53,10 +72,37 @@ function App() {
   };
 
   const clearLocalData = () => {
+    resetSchedule();
     setResult(null);
     setLoadError(null);
     setIsLoading(false);
     if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  const calculateSchedule = async () => {
+    if (!result?.isValid || isSolving) return;
+    resetSchedule();
+    const controller = new AbortController();
+    solveAbortRef.current = controller;
+    setIsSolving(true);
+    setSolveStatus("Starting the local scheduling worker…");
+    try {
+      const nextSchedule = await solveScheduleInWorker(
+        asSchedulingProject(result.data),
+        {},
+        (progress) => setSolveStatus(progress.message),
+        controller.signal,
+      );
+      setSchedule(nextSchedule);
+      setSolveStatus(null);
+    } catch (error) {
+      if (!(error instanceof DOMException && error.name === "AbortError")) {
+        setSolveError(error instanceof Error ? error.message : "The schedule could not be calculated.");
+      }
+    } finally {
+      if (solveAbortRef.current === controller) solveAbortRef.current = null;
+      setIsSolving(false);
+    }
   };
 
   const errors = result?.issues.filter((issue) => issue.severity === "error") ?? [];
@@ -158,6 +204,27 @@ function App() {
               <strong>{result.isValid ? "Workbook accepted" : "Workbook rejected"}</strong>
               <span>{errors.length} errors · {warnings.length} warnings</span>
             </div>
+
+            {result.isValid && (
+              <section className="schedule-panel" aria-label="Browser scheduling">
+                <button
+                  className="schedule-button"
+                  type="button"
+                  onClick={calculateSchedule}
+                  disabled={isSolving}
+                >
+                  {isSolving ? "Calculating schedule…" : "Calculate schedule locally"}
+                </button>
+                {solveStatus && <p role="status">{solveStatus}</p>}
+                {solveError && <p className="solve-error" role="alert">{solveError}</p>}
+                {schedule && (
+                  <div className="schedule-result" aria-live="polite">
+                    <strong>{schedule.objectiveGate}: {schedule.objectiveH} h</strong>
+                    <span>{schedule.solverMessage}</span>
+                  </div>
+                )}
+              </section>
+            )}
 
             {errors.length > 0 && (
               <section className="issue-group" aria-labelledby="errors-title">
