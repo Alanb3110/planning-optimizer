@@ -20,16 +20,26 @@ button, label { -webkit-tap-highlight-color: transparent; }
 
 .app-shell {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(340px, 520px);
-  gap: clamp(3rem, 8vw, 8rem);
-  align-items: center;
-  width: min(1180px, calc(100% - 3rem));
+  grid-template-columns: minmax(300px, 0.82fr) minmax(440px, 1.18fr);
+  gap: clamp(3rem, 6vw, 6rem);
+  align-items: start;
+  width: min(1280px, calc(100% - 3rem));
   min-height: 100vh;
   margin: 0 auto;
-  padding: 4rem 0;
+  padding: 5rem 0;
 }
 
-.hero { max-width: 620px; }
+.hero {
+  position: sticky;
+  top: 4rem;
+  max-width: 560px;
+}
+
+.workspace {
+  display: grid;
+  gap: 1.25rem;
+  min-width: 0;
+}
 
 .brand-mark {
   display: grid;
@@ -62,7 +72,7 @@ h1 {
   max-width: 700px;
   margin-bottom: 1.25rem;
   color: #0a1823;
-  font-size: clamp(3rem, 7vw, 6.2rem);
+  font-size: clamp(3rem, 6vw, 5.6rem);
   font-weight: 760;
   letter-spacing: -0.065em;
   line-height: 0.94;
@@ -162,6 +172,12 @@ h2 {
   transform: translateY(-1px);
 }
 
+.file-picker.disabled {
+  opacity: 0.55;
+  cursor: wait;
+  transform: none;
+}
+
 .file-picker:focus-within {
   outline: 3px solid rgba(15, 128, 110, 0.22);
   outline-offset: 3px;
@@ -215,6 +231,11 @@ h2 {
 
 .example-button:hover { color: #fff; background: #173f4c; }
 
+.example-button:disabled {
+  opacity: 0.55;
+  cursor: wait;
+}
+
 .example-button:focus-visible {
   outline: 3px solid rgba(15, 128, 110, 0.24);
   outline-offset: 3px;
@@ -231,6 +252,32 @@ h2 {
   color: #728086;
   font-size: 0.88rem;
 }
+
+.action-row {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 1.1rem;
+}
+
+.session-note {
+  color: #718087;
+  font-size: 0.76rem;
+}
+
+.clear-button {
+  padding: 0.35rem 0;
+  border: 0;
+  color: #40555f;
+  background: transparent;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.clear-button:hover:not(:disabled) { color: #9b342d; }
+.clear-button:disabled { opacity: 0.38; cursor: default; }
 
 .selection-status strong {
   overflow-wrap: anywhere;
@@ -249,6 +296,135 @@ h2 {
   background: #0f806e;
   font-weight: 800;
 }
+
+.status-symbol {
+  display: grid;
+  flex: 0 0 auto;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  color: #fff !important;
+  font-weight: 800;
+}
+
+.status-symbol.valid { background: #0f806e; }
+.status-symbol.error { background: #b7433b; }
+
+.spinner {
+  width: 22px;
+  height: 22px;
+  border: 2px solid #d7e4e0;
+  border-top-color: #0f806e;
+  border-radius: 50%;
+  animation: spin 700ms linear infinite;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.results {
+  display: grid;
+  gap: 1rem;
+  padding: clamp(1.25rem, 3vw, 1.75rem);
+  border: 1px solid rgba(16, 33, 45, 0.08);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 16px 45px rgba(23, 48, 59, 0.08);
+}
+
+.summary-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.65rem;
+}
+
+.summary-card {
+  display: grid;
+  gap: 0.2rem;
+  padding: 0.85rem;
+  border: 1px solid #e2e8e6;
+  border-radius: 11px;
+  background: #fafcfb;
+}
+
+.summary-card span {
+  color: #65757c;
+  font-size: 0.7rem;
+  font-weight: 750;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.summary-card strong {
+  color: #17313d;
+  font-size: 1.55rem;
+}
+
+.validation-banner {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.85rem 1rem;
+  border-radius: 10px;
+  font-size: 0.85rem;
+}
+
+.validation-banner.valid { color: #164c40; background: #e7f5f0; }
+.validation-banner.invalid { color: #762f2b; background: #fae9e7; }
+.validation-banner span { opacity: 0.78; }
+
+.issue-group {
+  min-width: 0;
+}
+
+.issue-group h3 {
+  margin: 0 0 0.6rem;
+  color: #7b302b;
+  font-size: 0.82rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.issue-group.warnings h3 { color: #785914; }
+
+.issue-group ul {
+  display: grid;
+  gap: 0.5rem;
+  max-height: 19rem;
+  padding: 0;
+  margin: 0;
+  overflow: auto;
+  list-style: none;
+}
+
+.issue-group li {
+  display: grid;
+  grid-template-columns: minmax(9rem, auto) 1fr;
+  gap: 0.75rem;
+  align-items: start;
+  padding: 0.7rem 0.8rem;
+  border-left: 3px solid #cb625b;
+  border-radius: 6px;
+  color: #4c5b61;
+  background: #fcf5f4;
+  font-size: 0.8rem;
+  line-height: 1.45;
+}
+
+.issue-group.warnings li {
+  border-left-color: #d2a33f;
+  background: #fdf8ec;
+}
+
+.issue-group code {
+  color: #7f3631;
+  font-size: 0.7rem;
+  font-weight: 800;
+  overflow-wrap: anywhere;
+}
+
+.issue-group.warnings code { color: #745717; }
 
 .visually-hidden {
   position: absolute;
@@ -271,11 +447,20 @@ h2 {
   }
 
   h1 { font-size: clamp(3.2rem, 14vw, 5.5rem); }
+
+  .hero { position: static; }
 }
 
 @media (max-width: 480px) {
   .file-picker { grid-template-columns: auto 1fr; }
   .browse-label { grid-column: 2; }
+
+  .summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+
+  .validation-banner,
+  .action-row { align-items: flex-start; flex-direction: column; }
+
+  .issue-group li { grid-template-columns: 1fr; gap: 0.25rem; }
 }
 
 @media (prefers-reduced-motion: reduce) {

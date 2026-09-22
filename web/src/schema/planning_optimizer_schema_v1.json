@@ -1,0 +1,279 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.local/ait-planning-optimizer/schema/v1",
+  "title": "AIT Planning Optimizer Project V1",
+  "type": "object",
+  "required": [
+    "metadata",
+    "systems",
+    "packages",
+    "activities",
+    "gates",
+    "dependencies",
+    "resources",
+    "activity_resources",
+    "zones",
+    "activity_zones",
+    "calendars",
+    "calendar_shifts",
+    "milestone_priorities"
+  ],
+  "properties": {
+    "metadata": {
+      "type": "object",
+      "required": ["project_id", "revision_id", "project_start"],
+      "properties": {
+        "project_id": {"type": "string"},
+        "project_name": {"type": "string"},
+        "revision_id": {"type": "string"},
+        "parent_revision": {"type": ["string", "null"]},
+        "project_start": {"type": "string", "format": "date-time"},
+        "active_calendar": {"type": ["string", "null"]},
+        "objective_gate": {"type": "string"},
+        "notes": {"type": "string"}
+      },
+      "additionalProperties": true
+    },
+    "systems": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/system"}
+    },
+    "packages": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/package"}
+    },
+    "activities": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/activity"}
+    },
+    "gates": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/gate"}
+    },
+    "dependencies": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/dependency"}
+    },
+    "resources": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/resource"}
+    },
+    "activity_resources": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/activityResource"}
+    },
+    "resource_substitutions": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/resourceSubstitution"},
+      "default": []
+    },
+    "zones": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/zone"}
+    },
+    "activity_zones": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/activityZone"}
+    },
+    "calendars": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/calendar"}
+    },
+    "calendar_shifts": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/calendarShift"}
+    },
+    "milestone_priorities": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/milestonePriority"}
+    }
+  },
+  "$defs": {
+    "id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_\\-]+$"
+    },
+    "system": {
+      "type": "object",
+      "required": ["system_id", "name", "family", "arrival_date", "enabled"],
+      "properties": {
+        "system_id": {"$ref": "#/$defs/id"},
+        "name": {"type": "string"},
+        "family": {"type": "string"},
+        "arrival_date": {"type": "string", "format": "date-time"},
+        "delivery_state": {"type": "string"},
+        "assembly_location": {"type": "string"},
+        "installation_zone": {"type": ["string", "null"]},
+        "template_version": {"type": ["string", "null"]},
+        "enabled": {"type": "boolean"},
+        "notes": {"type": "string"}
+      },
+      "additionalProperties": true
+    },
+    "package": {
+      "type": "object",
+      "required": ["package_id", "system_id", "name", "enabled"],
+      "properties": {
+        "package_id": {"$ref": "#/$defs/id"},
+        "system_id": {"$ref": "#/$defs/id"},
+        "name": {"type": "string"},
+        "template": {"type": ["string", "null"]},
+        "enabled": {"type": "boolean"},
+        "display_order": {"type": "integer", "minimum": 0}
+      },
+      "additionalProperties": true
+    },
+    "activity": {
+      "type": "object",
+      "required": ["activity_id", "package_id", "name", "duration_h", "duration_basis", "preemptible", "enabled"],
+      "properties": {
+        "activity_id": {"$ref": "#/$defs/id"},
+        "package_id": {"$ref": "#/$defs/id"},
+        "name": {"type": "string"},
+        "duration_h": {"type": "number", "minimum": 0},
+        "duration_basis": {"enum": ["WORK_TIME", "ELAPSED_TIME"]},
+        "preemptible": {"type": "boolean"},
+        "calendar_id": {"type": ["string", "null"]},
+        "enabled": {"type": "boolean"},
+        "template_origin": {"type": ["string", "null"]},
+        "is_override": {"type": "boolean"},
+        "notes": {"type": "string"}
+      },
+      "additionalProperties": true
+    },
+    "gate": {
+      "type": "object",
+      "required": ["gate_id", "name", "gate_type", "exposed"],
+      "properties": {
+        "gate_id": {"$ref": "#/$defs/id"},
+        "system_id": {"type": ["string", "null"]},
+        "package_id": {"type": ["string", "null"]},
+        "name": {"type": "string"},
+        "gate_type": {"type": "string"},
+        "exposed": {"type": "boolean"},
+        "is_project_milestone": {"type": "boolean"},
+        "notes": {"type": "string"}
+      },
+      "additionalProperties": true
+    },
+    "dependency": {
+      "type": "object",
+      "required": ["dependency_id", "source_type", "source_id", "target_type", "target_id", "relation", "lag_h", "enabled"],
+      "properties": {
+        "dependency_id": {"$ref": "#/$defs/id"},
+        "source_type": {"enum": ["ACTIVITY", "GATE"]},
+        "source_id": {"$ref": "#/$defs/id"},
+        "target_type": {"enum": ["ACTIVITY", "GATE"]},
+        "target_id": {"$ref": "#/$defs/id"},
+        "relation": {"const": "FS"},
+        "lag_h": {"type": "number", "minimum": 0},
+        "enabled": {"type": "boolean"},
+        "rationale": {"type": "string"}
+      },
+      "additionalProperties": true
+    },
+    "resource": {
+      "type": "object",
+      "required": ["resource_id", "name", "type", "capacity", "unlimited"],
+      "properties": {
+        "resource_id": {"$ref": "#/$defs/id"},
+        "name": {"type": "string"},
+        "type": {"enum": ["HUMAN", "EQUIPMENT", "WORKFRONT"]},
+        "capacity": {"type": "number", "minimum": 0},
+        "calendar_id": {"type": ["string", "null"]},
+        "unlimited": {"type": "boolean"},
+        "notes": {"type": "string"}
+      },
+      "additionalProperties": true
+    },
+    "activityResource": {
+      "type": "object",
+      "required": ["activity_id", "resource_id", "quantity"],
+      "properties": {
+        "activity_id": {"$ref": "#/$defs/id"},
+        "resource_id": {"$ref": "#/$defs/id"},
+        "quantity": {"type": "number", "exclusiveMinimum": 0}
+      },
+      "additionalProperties": false
+    },
+    "resourceSubstitution": {
+      "type": "object",
+      "required": ["required_resource_id", "substitute_resource_id", "conversion_ratio", "enabled"],
+      "properties": {
+        "required_resource_id": {"$ref": "#/$defs/id"},
+        "substitute_resource_id": {"$ref": "#/$defs/id"},
+        "conversion_ratio": {"type": "number", "exclusiveMinimum": 0},
+        "enabled": {"type": "boolean"},
+        "notes": {"type": "string"}
+      },
+      "additionalProperties": false
+    },
+    "zone": {
+      "type": "object",
+      "required": ["zone_id", "name", "capacity"],
+      "properties": {
+        "zone_id": {"$ref": "#/$defs/id"},
+        "name": {"type": "string"},
+        "capacity": {"type": "number", "exclusiveMinimum": 0},
+        "calendar_id": {"type": ["string", "null"]},
+        "notes": {"type": "string"}
+      },
+      "additionalProperties": true
+    },
+    "activityZone": {
+      "type": "object",
+      "required": ["activity_id", "zone_id", "load", "exclusive"],
+      "properties": {
+        "activity_id": {"$ref": "#/$defs/id"},
+        "zone_id": {"$ref": "#/$defs/id"},
+        "load": {
+          "oneOf": [
+            {"type": "number", "exclusiveMinimum": 0},
+            {"const": "ALL"}
+          ]
+        },
+        "exclusive": {"type": "boolean"}
+      },
+      "additionalProperties": false
+    },
+    "calendar": {
+      "type": "object",
+      "required": ["calendar_id", "name", "timezone"],
+      "properties": {
+        "calendar_id": {"$ref": "#/$defs/id"},
+        "name": {"type": "string"},
+        "timezone": {"type": "string"},
+        "valid_from": {"type": ["string", "null"], "format": "date"},
+        "valid_to": {"type": ["string", "null"], "format": "date"},
+        "weekend_days": {"type": "array", "items": {"enum": ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"]}},
+        "notes": {"type": "string"}
+      },
+      "additionalProperties": true
+    },
+    "calendarShift": {
+      "type": "object",
+      "required": ["calendar_id", "weekday", "shift_name", "start_time", "end_time", "enabled"],
+      "properties": {
+        "calendar_id": {"$ref": "#/$defs/id"},
+        "weekday": {"enum": ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"]},
+        "shift_name": {"type": "string"},
+        "start_time": {"type": "string", "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$"},
+        "end_time": {"type": "string", "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$"},
+        "enabled": {"type": "boolean"}
+      },
+      "additionalProperties": false
+    },
+    "milestonePriority": {
+      "type": "object",
+      "required": ["gate_id", "enabled"],
+      "properties": {
+        "gate_id": {"$ref": "#/$defs/id"},
+        "priority": {"type": ["integer", "null"], "minimum": 1},
+        "enabled": {"type": "boolean"},
+        "notes": {"type": "string"}
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}
