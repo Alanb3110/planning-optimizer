@@ -1,7 +1,8 @@
 import { type ChangeEvent, useEffect, useId, useRef, useState } from "react";
+import { ScheduleResults } from "./components/ScheduleResults";
 import type { ValidationIssue, WorkbookImportResult } from "./lib/model";
 import { solveScheduleInWorker } from "./lib/scheduler/solverClient";
-import { asSchedulingProject, type ScheduleResult } from "./lib/scheduler/types";
+import { asSchedulingProject, type ScheduleResult, type SolveProgress } from "./lib/scheduler/types";
 import { importWorkbook } from "./lib/workbookImport";
 
 const EXAMPLE_NAME = "synthetic_project.xlsx";
@@ -10,16 +11,30 @@ function issueTitle(issue: ValidationIssue) {
   return issue.location ? `${issue.location}: ${issue.message}` : issue.message;
 }
 
+function errorKind(message: string): "infeasible" | "error" {
+  const normalized = message.toLowerCase();
+  return normalized.includes("infeasible") ||
+    normalized.includes("no feasible execution profile") ||
+    /status (8|9)\b/.test(normalized)
+    ? "infeasible"
+    : "error";
+}
+
 function App() {
   const inputId = useId();
+  const horizonId = useId();
+  const timeLimitId = useId();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [result, setResult] = useState<WorkbookImportResult | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [schedule, setSchedule] = useState<ScheduleResult | null>(null);
   const [isSolving, setIsSolving] = useState(false);
-  const [solveStatus, setSolveStatus] = useState<string | null>(null);
+  const [solveProgress, setSolveProgress] = useState<SolveProgress | null>(null);
   const [solveError, setSolveError] = useState<string | null>(null);
+  const [solveDurationMs, setSolveDurationMs] = useState<number | null>(null);
+  const [horizonDays, setHorizonDays] = useState("0");
+  const [timeLimitS, setTimeLimitS] = useState("120");
   const solveAbortRef = useRef<AbortController | null>(null);
 
   const resetSchedule = () => {
@@ -27,8 +42,9 @@ function App() {
     solveAbortRef.current = null;
     setSchedule(null);
     setIsSolving(false);
-    setSolveStatus(null);
+    setSolveProgress(null);
     setSolveError(null);
+    setSolveDurationMs(null);
   };
 
   useEffect(() => () => solveAbortRef.current?.abort(), []);
@@ -53,6 +69,7 @@ function App() {
   };
 
   const loadExample = async () => {
+    resetSchedule();
     if (fileInputRef.current) fileInputRef.current.value = "";
     setIsLoading(true);
     setLoadError(null);
@@ -79,22 +96,33 @@ function App() {
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
+  const horizonValue = Number(horizonDays);
+  const timeLimitValue = Number(timeLimitS);
+  const horizonValid = Number.isInteger(horizonValue) && horizonValue >= 0;
+  const timeLimitValid = Number.isFinite(timeLimitValue) && timeLimitValue > 0;
+  const settingsValid = horizonValid && timeLimitValid;
+
   const calculateSchedule = async () => {
-    if (!result?.isValid || isSolving) return;
+    if (!result?.isValid || isSolving || !settingsValid) return;
     resetSchedule();
     const controller = new AbortController();
+    const startedAt = performance.now();
     solveAbortRef.current = controller;
     setIsSolving(true);
-    setSolveStatus("Starting the local scheduling worker…");
+    setSolveProgress({ stage: "loading", message: "Starting the local scheduling worker…" });
     try {
       const nextSchedule = await solveScheduleInWorker(
         asSchedulingProject(result.data),
-        {},
-        (progress) => setSolveStatus(progress.message),
+        {
+          horizonDays: horizonValue === 0 ? undefined : horizonValue,
+          timeLimitS: timeLimitValue,
+        },
+        setSolveProgress,
         controller.signal,
       );
       setSchedule(nextSchedule);
-      setSolveStatus(null);
+      setSolveDurationMs(performance.now() - startedAt);
+      setSolveProgress(null);
     } catch (error) {
       if (!(error instanceof DOMException && error.name === "AbortError")) {
         setSolveError(error instanceof Error ? error.message : "The schedule could not be calculated.");
@@ -105,35 +133,37 @@ function App() {
     }
   };
 
+  const cancelSolve = () => {
+    solveAbortRef.current?.abort();
+    solveAbortRef.current = null;
+    setIsSolving(false);
+    setSolveProgress(null);
+  };
+
   const errors = result?.issues.filter((issue) => issue.severity === "error") ?? [];
   const warnings = result?.issues.filter((issue) => issue.severity === "warning") ?? [];
+  const project = result?.isValid ? asSchedulingProject(result.data) : null;
+  const currentErrorKind = solveError ? errorKind(solveError) : null;
 
   return (
     <main className="app-shell">
-      <section className="hero" aria-labelledby="page-title">
-        <div className="brand-mark" aria-hidden="true"><span /><span /><span /></div>
-        <p className="eyebrow">Browser-based scheduling workspace</p>
-        <h1 id="page-title">AIT Planning Optimizer</h1>
-        <p className="intro">
-          Import and check an AIT planning workbook before scheduling. Validation runs in
-          this browser.
-        </p>
+      <header className="app-header">
+        <div className="brand-lockup">
+          <div className="brand-mark" aria-hidden="true"><span /><span /><span /></div>
+          <div><span className="product-code">AIT / SCHEDULING</span><h1>AIT Planning Optimizer</h1></div>
+        </div>
         <div className="privacy-note" role="note">
           <span className="privacy-dot" aria-hidden="true" />
-          <div>
-            <strong>Local processing only</strong>
-            <span>Your workbook is not uploaded, persisted, or sent to an external API.</span>
-          </div>
+          <div><strong>Local processing only</strong><span>No upload · no persistence · no external API</span></div>
         </div>
-      </section>
+      </header>
 
-      <section className="workspace" aria-label="Workbook import and validation">
-        <section className="import-card" aria-labelledby="import-title">
-          <div className="card-heading">
-            <div><p className="step-label">Import</p><h2 id="import-title">Choose a workbook</h2></div>
+      <section className="control-deck" aria-label="Planning controls">
+        <section className="control-panel import-panel" aria-labelledby="import-title">
+          <div className="panel-heading">
+            <div><span className="step-index">01</span><h2 id="import-title">Workbook</h2></div>
             <span className="file-type">.xlsx</span>
           </div>
-
           <input
             ref={fileInputRef}
             id={inputId}
@@ -142,115 +172,110 @@ function App() {
             aria-label="Select a local .xlsx file"
             accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
             onChange={handleFileSelection}
-            disabled={isLoading}
+            disabled={isLoading || isSolving}
           />
-          <label className={`file-picker${isLoading ? " disabled" : ""}`} htmlFor={inputId}>
-            <span className="upload-icon" aria-hidden="true">↑</span>
-            <span>
-              <strong>Select a local .xlsx file</strong>
-              <small>The source file remains in this browser session.</small>
-            </span>
-            <span className="browse-label">Browse</span>
-          </label>
-
-          <div className="separator" aria-hidden="true"><span>or</span></div>
-          <button className="example-button" type="button" onClick={loadExample} disabled={isLoading}>
-            Load synthetic example
-          </button>
-
-          <div className="action-row">
-            <span className="session-note">No automatic browser storage</span>
-            <button
-              className="clear-button"
-              type="button"
-              onClick={clearLocalData}
-              disabled={!result && !loadError && !isLoading}
-            >
-              Clear local data
+          <div className="import-actions">
+            <label className={`file-picker${isLoading || isSolving ? " disabled" : ""}`} htmlFor={inputId}>
+              <span className="upload-icon" aria-hidden="true">↑</span>
+              <span><strong>Select local workbook</strong><small>Read in this browser session</small></span>
+              <span className="browse-label">Browse</span>
+            </label>
+            <span className="or-label" aria-hidden="true">OR</span>
+            <button className="secondary-button" type="button" onClick={loadExample} disabled={isLoading || isSolving}>
+              Load synthetic example
             </button>
           </div>
-
           <div className="selection-status" aria-live="polite">
             {isLoading ? (
-              <><span className="spinner" aria-hidden="true" /><span>Reading and validating workbook…</span></>
+              <><span className="spinner" aria-hidden="true" /><span><strong>Validating workbook</strong><small>Reading sheets and checking the V1 model…</small></span></>
             ) : loadError ? (
-              <><span className="status-symbol error" aria-hidden="true">!</span><span>{loadError}</span></>
+              <><span className="status-symbol error" aria-hidden="true">!</span><span><strong>Import failed</strong><small>{loadError}</small></span></>
             ) : result ? (
               <>
-                <span className={`status-symbol ${result.isValid ? "valid" : "error"}`} aria-hidden="true">
-                  {result.isValid ? "✓" : "!"}
-                </span>
-                <div>
-                  <strong>{result.fileName}</strong>
-                  <span>
-                    {result.isValid
-                      ? `Accepted with ${warnings.length} warning${warnings.length === 1 ? "" : "s"}.`
-                      : `Rejected with ${errors.length} error${errors.length === 1 ? "" : "s"}.`}
-                  </span>
-                </div>
+                <span className={`status-symbol ${result.isValid ? "valid" : "error"}`} aria-hidden="true">{result.isValid ? "✓" : "!"}</span>
+                <span><strong>{result.fileName}</strong><small>{result.isValid ? `Validated · ${warnings.length} warning${warnings.length === 1 ? "" : "s"}` : `Rejected · ${errors.length} error${errors.length === 1 ? "" : "s"}`}</small></span>
               </>
-            ) : <span>No workbook selected.</span>}
+            ) : <span className="empty-selection"><strong>No workbook loaded</strong><small>Select a V1 workbook or use the synthetic example.</small></span>}
+            <button className="text-button" type="button" onClick={clearLocalData} disabled={!result && !loadError && !isLoading}>Clear local data</button>
           </div>
         </section>
 
-        {result && (
-          <section className="results" aria-label="Validation results">
-            <div className="summary-grid" aria-label="Workbook summary">
-              {Object.entries(result.summary).map(([label, value]) => (
-                <div className="summary-card" key={label}><span>{label}</span><strong>{value}</strong></div>
-              ))}
+        <section className="control-panel settings-panel" aria-labelledby="settings-title">
+          <div className="panel-heading"><div><span className="step-index">02</span><h2 id="settings-title">Solver settings</h2></div><span className="local-badge">LOCAL WASM</span></div>
+          <div className="settings-grid">
+            <label htmlFor={horizonId}>
+              <span>Planning horizon</span>
+              <span className="number-input"><input id={horizonId} aria-label="Planning horizon" type="number" min="0" step="1" inputMode="numeric" value={horizonDays} onChange={(event) => setHorizonDays(event.target.value)} disabled={isSolving} aria-describedby={`${horizonId}-hint`} aria-invalid={!horizonValid} /><b>days</b></span>
+              <small id={`${horizonId}-hint`}>{horizonValid ? (horizonValue === 0 ? "0 = automatically estimated" : `${horizonValue * 24} hourly slots`) : "Enter zero or a positive whole number."}</small>
+            </label>
+            <label htmlFor={timeLimitId}>
+              <span>Solver time limit</span>
+              <span className="number-input"><input id={timeLimitId} aria-label="Solver time limit" type="number" min="1" step="1" inputMode="numeric" value={timeLimitS} onChange={(event) => setTimeLimitS(event.target.value)} disabled={isSolving} aria-describedby={`${timeLimitId}-hint`} aria-invalid={!timeLimitValid} /><b>sec</b></span>
+              <small id={`${timeLimitId}-hint`}>{timeLimitValid ? "Maximum time for each optimization pass" : "Enter a value greater than zero."}</small>
+            </label>
+          </div>
+          <div className="solve-actions">
+            <button className="primary-button" type="button" onClick={calculateSchedule} disabled={!result?.isValid || !settingsValid || isSolving}>
+              {isSolving ? <><span className="button-spinner" aria-hidden="true" /> Calculating schedule…</> : schedule ? "Recalculate schedule" : "Calculate schedule"}
+            </button>
+            {isSolving && <button className="cancel-button" type="button" onClick={cancelSolve}>Cancel</button>}
+          </div>
+          {isSolving && (
+            <div className="progress-state" role="status" aria-live="polite">
+              <div className="progress-track"><span /></div>
+              <div><strong>{solveProgress?.stage === "optimizing" ? "Optimizing" : solveProgress?.stage === "building" ? "Building model" : "Loading solver"}</strong><span>{solveProgress?.message}</span></div>
             </div>
-            <div className={`validation-banner ${result.isValid ? "valid" : "invalid"}`}>
-              <strong>{result.isValid ? "Workbook accepted" : "Workbook rejected"}</strong>
-              <span>{errors.length} errors · {warnings.length} warnings</span>
-            </div>
+          )}
+        </section>
+      </section>
 
-            {result.isValid && (
-              <section className="schedule-panel" aria-label="Browser scheduling">
-                <button
-                  className="schedule-button"
-                  type="button"
-                  onClick={calculateSchedule}
-                  disabled={isSolving}
-                >
-                  {isSolving ? "Calculating schedule…" : "Calculate schedule locally"}
-                </button>
-                {solveStatus && <p role="status">{solveStatus}</p>}
-                {solveError && <p className="solve-error" role="alert">{solveError}</p>}
-                {schedule && (
-                  <div className="schedule-result" aria-live="polite">
-                    <strong>{schedule.objectiveGate}: {schedule.objectiveH} h</strong>
-                    <span>{schedule.solverMessage}</span>
-                  </div>
-                )}
-              </section>
-            )}
+      {result && (
+        <section className="validation-strip" aria-label="Workbook validation summary">
+          <div className={`validation-state ${result.isValid ? "valid" : "invalid"}`}><span aria-hidden="true">{result.isValid ? "✓" : "!"}</span><div><strong>{result.isValid ? "Workbook accepted" : "Workbook rejected"}</strong><small>{errors.length} errors · {warnings.length} warnings</small></div></div>
+          <div className="model-counts" aria-label="Workbook entity counts">
+            {Object.entries(result.summary).map(([label, value]) => <div key={label}><strong>{value}</strong><span>{label}</span></div>)}
+          </div>
+        </section>
+      )}
 
-            {errors.length > 0 && (
-              <section className="issue-group" aria-labelledby="errors-title">
-                <h3 id="errors-title">Errors</h3>
-                <ul>{errors.map((validationIssue, index) => (
-                  <li key={`${validationIssue.code}-${index}`}>
-                    <code>{validationIssue.code}</code><span>{issueTitle(validationIssue)}</span>
-                  </li>
-                ))}</ul>
-              </section>
-            )}
-            {warnings.length > 0 && (
-              <section className="issue-group warnings" aria-labelledby="warnings-title">
-                <h3 id="warnings-title">Warnings</h3>
-                <ul>{warnings.map((validationIssue, index) => (
-                  <li key={`${validationIssue.code}-${index}`}>
-                    <code>{validationIssue.code}</code><span>{issueTitle(validationIssue)}</span>
-                  </li>
-                ))}</ul>
-              </section>
-            )}
-          </section>
+      {(errors.length > 0 || warnings.length > 0) && (
+        <section className="issues-panel" aria-label="Validation issues">
+          {errors.length > 0 && <IssueGroup title="Errors" issues={errors} />}
+          {warnings.length > 0 && <IssueGroup title="Warnings" issues={warnings} warning />}
+        </section>
+      )}
+
+      <section className="output-panel" aria-label="Schedule output">
+        {!result && !loadError && !isLoading && (
+          <div className="empty-state"><span className="state-code">WAITING FOR INPUT</span><h2>Schedule output</h2><p>Load a workbook to validate the model and enable local optimization.</p><div className="empty-grid" aria-hidden="true"><span /><span /><span /><span /></div></div>
         )}
+        {result && !result.isValid && (
+          <div className="terminal-state invalid"><span className="state-icon" aria-hidden="true">!</span><div><span className="state-code">VALIDATION BLOCKED</span><h2>Resolve workbook errors before solving</h2><p>The source model remains in memory so you can review the issues above or select a corrected file.</p></div></div>
+        )}
+        {result?.isValid && !schedule && !isSolving && !solveError && (
+          <div className="terminal-state ready"><span className="state-icon" aria-hidden="true">✓</span><div><span className="state-code">MODEL READY</span><h2>Ready to calculate</h2><p>Review the horizon and time limit, then run HiGHS locally in the scheduling Worker.</p></div></div>
+        )}
+        {result?.isValid && isSolving && (
+          <div className="terminal-state solving"><span className="large-spinner" aria-hidden="true" /><div><span className="state-code">SOLVER ACTIVE</span><h2>Calculating the optimized schedule</h2><p>{solveProgress?.message ?? "Preparing the scheduling model…"}</p></div></div>
+        )}
+        {result?.isValid && solveError && (
+          <div className={`terminal-state ${currentErrorKind}`} role="alert"><span className="state-icon" aria-hidden="true">{currentErrorKind === "infeasible" ? "∅" : "!"}</span><div><span className="state-code">{currentErrorKind === "infeasible" ? "NO FEASIBLE SCHEDULE" : "SOLVER ERROR"}</span><h2>{currentErrorKind === "infeasible" ? "The model is infeasible within these settings" : "The schedule could not be calculated"}</h2><p>{solveError}</p><button className="secondary-button retry-button" type="button" onClick={calculateSchedule}>Try again</button></div></div>
+        )}
+        {project && schedule && <ScheduleResults project={project} result={schedule} solveDurationMs={solveDurationMs} />}
       </section>
     </main>
   );
 }
 
+function IssueGroup({ title, issues, warning = false }: { title: string; issues: ValidationIssue[]; warning?: boolean }) {
+  const titleId = `${title.toLowerCase()}-title`;
+  return (
+    <section className={`issue-group${warning ? " warnings" : ""}`} aria-labelledby={titleId}>
+      <h3 id={titleId}>{title} <span>{issues.length}</span></h3>
+      <ul>{issues.map((issue, index) => <li key={`${issue.code}-${index}`}><code>{issue.code}</code><span>{issueTitle(issue)}</span></li>)}</ul>
+    </section>
+  );
+}
+
 export default App;
+export { errorKind };
