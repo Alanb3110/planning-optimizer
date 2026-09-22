@@ -4,6 +4,9 @@ __pycache__/
 *.egg-info/
 build/
 dist/
+web/node_modules/
+web/dist/
+web/coverage/
 
 .env
 .env.*
@@ -27,3 +30,4 @@ private_terms.txt
 *.db
 
 !examples/synthetic_project.xlsx
+!web/public/synthetic_project.xlsx
