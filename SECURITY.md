@@ -29,7 +29,7 @@ Automated tests exercise the fictitious example through validation and the real 
 
 ## Known residual dependency risk
 
-The current npm `xlsx` package is version 0.18.5. `npm audit` reports [GHSA-4r6h-8v6p-xvw6](https://github.com/advisories/GHSA-4r6h-8v6p-xvw6) and [GHSA-5pgg-2g8v-p4x9](https://github.com/advisories/GHSA-5pgg-2g8v-p4x9), and npm does not currently offer an automatic fixed version. The application limits workbook inputs to 20 MiB, disables formula extraction, uses no macro execution path, and documents that workbooks must come from trusted sources. These controls reduce exposure but do not eliminate parser risk. Replacing or upgrading the parser requires a separately tested change because import normalization is part of the V1 functional contract.
+The browser build uses SheetJS `xlsx` 0.20.3 from the project's authoritative distribution tarball because the public npm registry is limited to the vulnerable 0.18.5 release. Version 0.20.3 includes the fixes for [GHSA-4r6h-8v6p-xvw6](https://github.com/advisories/GHSA-4r6h-8v6p-xvw6) and [GHSA-5pgg-2g8v-p4x9](https://github.com/advisories/GHSA-5pgg-2g8v-p4x9). The tarball URL and integrity digest are pinned in `package-lock.json`; it is a build-time dependency and is bundled into the same-origin production assets, not loaded from a runtime CDN. Workbooks must still come from trusted sources because spreadsheet parsers process complex attacker-controlled input.
 
 The remaining Vitest advisory affects development tooling rather than the deployed runtime and currently requires a major-version test-runner upgrade. It must be reassessed before the next dependency-maintenance release.
 
