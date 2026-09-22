@@ -53,6 +53,7 @@ button:focus-visible, input:focus-visible, [tabindex="0"]:focus-visible {
 }
 h1, h2, h3, p { margin-top: 0; }
 h1 { margin: 0.16rem 0 0; color: #10242f; font-size: clamp(1.2rem, 2vw, 1.65rem); letter-spacing: -0.035em; line-height: 1.1; }
+.build-version { display: block; margin-top: 0.2rem; color: #667b80; font: 0.65rem ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
 h2 { margin: 0; color: #172e39; font-size: 1rem; letter-spacing: -0.015em; }
 h3 { margin: 0; color: #18323d; font-size: 1.05rem; letter-spacing: -0.02em; }
 
@@ -331,6 +332,7 @@ td > strong { color: #183641; }
 
 :root[data-theme="dark"] { color-scheme: dark; color: #e2eceb; background: #101b21; }
 :root[data-theme="dark"] body { background: #101b21; }
+:root[data-theme="dark"] .build-version { color: #aec1c4; }
 :root[data-theme="dark"] .app-header,
 :root[data-theme="dark"] .control-panel,
 :root[data-theme="dark"] .validation-strip,

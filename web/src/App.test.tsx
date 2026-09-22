@@ -49,6 +49,8 @@ describe("AIT Planning Optimizer workspace", () => {
   it("shows the local workflow, solver settings, and an empty result state", () => {
     render(<App />);
     expect(screen.getByRole("heading", { name: "AIT Planning Optimizer" })).toBeInTheDocument();
+    expect(screen.getByText("Version dev")).toBeInTheDocument();
+    expect(document.documentElement).toHaveAttribute("data-theme", "dark");
     expect(screen.getByText("Local processing only")).toBeInTheDocument();
     expect(screen.getByLabelText("Select a local .xlsx file")).toHaveAttribute("accept", expect.stringContaining(".xlsx"));
     expect(screen.getByRole("button", { name: "Load synthetic example" })).toBeInTheDocument();
@@ -62,17 +64,17 @@ describe("AIT Planning Optimizer workspace", () => {
   it("switches themes without persisting project data or changing the loaded workbook", async () => {
     vi.mocked(importWorkbook).mockResolvedValue(importedWorkbook);
     const { unmount } = render(<App />);
-    const toggle = screen.getByRole("button", { name: "Dark theme" });
-    expect(toggle).toHaveAttribute("aria-pressed", "false");
+    const toggle = screen.getByRole("button", { name: "Light theme" });
+    expect(toggle).toHaveAttribute("aria-pressed", "true");
     fireEvent.click(toggle);
-    expect(document.documentElement).toHaveAttribute("data-theme", "dark");
-    expect(screen.getByRole("button", { name: "Light theme" })).toHaveAttribute("aria-pressed", "true");
+    expect(document.documentElement).toHaveAttribute("data-theme", "light");
+    expect(screen.getByRole("button", { name: "Dark theme" })).toHaveAttribute("aria-pressed", "false");
     fireEvent.change(screen.getByLabelText("Select a local .xlsx file"), {
       target: { files: [new File(["synthetic"], "synthetic_project.xlsx")] },
     });
     expect(await screen.findByText("Workbook accepted")).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "Light theme" }));
-    expect(document.documentElement).toHaveAttribute("data-theme", "light");
+    fireEvent.click(screen.getByRole("button", { name: "Dark theme" }));
+    expect(document.documentElement).toHaveAttribute("data-theme", "dark");
     expect(screen.getByText("Workbook accepted")).toBeInTheDocument();
     unmount();
     expect(document.documentElement).not.toHaveAttribute("data-theme");

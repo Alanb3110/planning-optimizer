@@ -38,7 +38,7 @@ function App() {
   const [lastRunSettings, setLastRunSettings] = useState<RunSettings | null>(null);
   const [horizonDays, setHorizonDays] = useState("0");
   const [timeLimitS, setTimeLimitS] = useState("120");
-  const [theme, setTheme] = useState<"light" | "dark">("light");
+  const [theme, setTheme] = useState<"light" | "dark">("dark");
   const solveAbortRef = useRef<AbortController | null>(null);
 
   const resetSchedule = () => {
@@ -156,7 +156,7 @@ function App() {
       <header className="app-header">
         <div className="brand-lockup">
           <div className="brand-mark" aria-hidden="true"><span /><span /><span /></div>
-          <div><span className="product-code">AIT / SCHEDULING</span><h1>AIT Planning Optimizer</h1></div>
+          <div><span className="product-code">AIT / SCHEDULING</span><h1>AIT Planning Optimizer</h1><small className="build-version">Version {import.meta.env.VITE_BUILD_COMMIT || "dev"}</small></div>
         </div>
         <div className="header-actions">
           <div className="privacy-note" role="note">
