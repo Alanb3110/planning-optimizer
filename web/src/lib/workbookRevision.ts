@@ -8,6 +8,16 @@ const canonical = (value: unknown): string => JSON.stringify(value, (_key, item)
   item && !Array.isArray(item) && typeof item === "object"
     ? Object.fromEntries(Object.entries(item).sort(([a], [b]) => a.localeCompare(b))) : item);
 
+function sheetContents(sheet: XLSX.WorkSheet): string {
+  // sheet_to_json can return a Date for a formatted numeric cell before an XLSX
+  // roundtrip and its Excel serial afterwards. Compare stored cells instead.
+  const cells = Object.entries(sheet)
+    .filter(([address, cell]) => !address.startsWith("!") && cell && (cell.v !== undefined || cell.f !== undefined))
+    .map(([address, cell]) => ({ address, type: cell.t, value: cell.v, formula: cell.f, format: cell.z }))
+    .sort((a, b) => a.address.localeCompare(b.address));
+  return canonical(cells);
+}
+
 function updateTable(sheet: XLSX.WorkSheet, key: string, rows: Record<string, unknown>[]) {
   const cells = XLSX.utils.sheet_to_json<unknown[]>(sheet, { header: 1, raw: true, defval: null });
   const headerIndex = cells.slice(0, 30).findIndex((row) => row.some((value) => value === key));
@@ -79,17 +89,12 @@ export async function createWorkbookRevision(source: Source, project: Normalized
       throw new Error(`Revision failed reimport: metadata.${key} changed unexpectedly.`);
     }
   }
-  const reread = XLSX.read(bytes, { type: "array", cellFormula: true });
+  const reread = XLSX.read(bytes, { type: "array", cellFormula: true, cellStyles: true });
   for (const sheetName of workbook.SheetNames.filter((name) => !["Metadata", "Dependencies", "MilestonePriorities"].includes(name))) {
     const original = workbook.Sheets[sheetName];
     const revised = reread.Sheets[sheetName];
-    if (!revised || canonical(XLSX.utils.sheet_to_json(original, { header: 1, raw: true }))
-      !== canonical(XLSX.utils.sheet_to_json(revised, { header: 1, raw: true }))) {
+    if (!revised || sheetContents(original) !== sheetContents(revised)) {
       throw new Error(`Revision failed verification: worksheet '${sheetName}' changed.`);
-    }
-    for (const [cell, record] of Object.entries(original)) {
-      if (cell.startsWith("!") || !record?.f) continue;
-      if (revised[cell]?.f !== record.f) throw new Error(`Revision failed verification: formula ${sheetName}!${cell} changed.`);
     }
   }
   return { bytes, fileName: `${String(project.metadata.project_id).replace(/[^a-zA-Z0-9._-]/g, "-")}_${revision.replace(/[^a-zA-Z0-9._-]/g, "-")}.xlsx`, revision, reimport };

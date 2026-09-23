@@ -1,5 +1,31 @@
 import { resolve } from "node:path";
+import { readFile } from "node:fs/promises";
+import * as XLSX from "xlsx";
 import { expect, test } from "@playwright/test";
+
+test("fictional lag edit downloads a reimportable revision with unchanged Systems dates", async ({ page }) => {
+  await page.goto("/");
+  await page.getByLabel("Select a local .xlsx file").setInputFiles(resolve("../examples/synthetic_project.xlsx"));
+  await expect(page.getByLabel("Workbook validation summary")).toContainText("Workbook accepted");
+  await page.getByLabel("Systems, packages, activities and gates")
+    .getByRole("button", { name: /PREPARE_FOUNDATION/ }).click();
+  await page.getByRole("button", { name: "Edit DEP_003" }).click();
+  await page.getByLabel("Lag (h)").fill("3");
+  await page.getByRole("button", { name: "Save dependency" }).click();
+  await expect(page.getByLabel("Workbook validation summary")).toContainText("Workbook accepted");
+  const downloadPromise = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Download new .xlsx revision" }).click();
+  const download = await downloadPromise;
+  expect(download.suggestedFilename()).toMatch(/_EDIT_\d+\.xlsx$/);
+  const source = XLSX.read(new Uint8Array(await readFile(resolve("../examples/synthetic_project.xlsx"))), { type: "array", cellStyles: true });
+  const revision = XLSX.read(new Uint8Array(await readFile(await download.path())), { type: "array", cellStyles: true });
+  const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(revision.Sheets.Dependencies);
+  expect(rows.find((row) => row.dependency_id === "DEP_003")?.lag_h).toBe(3);
+  for (const address of ["D2", "D3"]) {
+    expect(revision.Sheets.Systems[address].v).toBe(source.Sheets.Systems[address].v);
+    expect(revision.Sheets.Systems[address].z).toBe(source.Sheets.Systems[address].z);
+  }
+});
 
 test("fictitious workbook imports and solves locally in the production build", async ({ page, context }) => {
   const origin = "http://127.0.0.1:4173";

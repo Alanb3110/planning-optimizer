@@ -10,6 +10,24 @@ const fixture = resolve(process.cwd(), "public/synthetic_project.xlsx");
 const fixedTime = new Date("2030-02-03T04:05:06Z");
 
 describe("local V1 workbook revision", () => {
+  it("exports a direct synthetic import after changing DEP_003, preserving formatted Systems dates", async () => {
+    const source = new Uint8Array(await readFile(fixture));
+    const original = XLSX.read(source, { type: "array", cellStyles: true });
+    const imported = await importWorkbook(source);
+    expect(imported.isValid).toBe(true);
+    const data = { ...imported.data, dependencies: imported.data.dependencies.map((row) =>
+      row.dependency_id === "DEP_003" ? { ...row, lag_h: 3 } : row) };
+    const revision = await createWorkbookRevision(source, data, "Fictional lag edit", fixedTime);
+    expect(revision.reimport.isValid).toBe(true);
+    expect(revision.reimport.data.dependencies.find((row) => row.dependency_id === "DEP_003")?.lag_h).toBe(3);
+    expect(revision.reimport.data.systems).toEqual(imported.data.systems);
+    const output = XLSX.read(revision.bytes, { type: "array", cellStyles: true });
+    for (const address of ["D2", "D3"]) {
+      expect(output.Sheets.Systems[address].v).toBe(original.Sheets.Systems[address].v);
+      expect(output.Sheets.Systems[address].z).toBe(original.Sheets.Systems[address].z);
+    }
+  });
+
   it("reimports edited FS links and gate priorities while keeping other sheets, formulas and normalized data", async () => {
     const workbook = XLSX.read(new Uint8Array(await readFile(fixture)), { type: "array" });
     const extra = XLSX.utils.aoa_to_sheet([["Keep", "Formula"], [42, { f: "A2*2", v: 84 }]]);
