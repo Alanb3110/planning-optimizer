@@ -452,3 +452,39 @@ td > strong { color: #183641; }
 :root[data-theme="dark"] .explanation select { border-color: #57717a; background: #20343e; color: #e1eeeb; }
 :root[data-theme="dark"] .explanation-caveat { background: #243941; }
 :root[data-theme="dark"] .activity-inspect { color: #8be2ce; }
+
+.workbook-explorer { min-width: 0; border: 1px solid #d6dcda; background: #fff; padding: 1rem; }
+.workbook-explorer > p { color: #5b7178; font-size: 0.74rem; line-height: 1.5; }
+.workbook-layout { display: grid; grid-template-columns: minmax(270px, 1fr) minmax(300px, 1.2fr); gap: 1rem; }
+.workbook-browser, .workbook-details { min-width: 0; border: 1px solid #dbe3e0; background: #f8faf9; padding: 0.8rem; }
+.workbook-browser > label { display: block; margin-bottom: 0.4rem; font-size: 0.76rem; font-weight: 700; }
+.workbook-browser > input { width: 100%; padding: 0.55rem; border: 1px solid #a9bdbb; border-radius: 3px; background: #fff; color: #23414a; }
+.workbook-tree { max-height: 500px; overflow: auto; margin-top: 0.6rem; }
+.workbook-tree ul, .workbook-relations ul { list-style: none; padding: 0; margin: 0; }
+.workbook-tree ul ul { margin-left: 0.8rem; padding-left: 0.6rem; border-left: 1px solid #cfddda; }
+.workbook-tree li { margin: 0.2rem 0; }
+.workbook-global { margin-top: 0.7rem; }
+.workbook-global h3 { font-size: 0.8rem; margin: 0.3rem 0; }
+.workbook-item { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.25rem 0.5rem; width: 100%; padding: 0.35rem 0.45rem; border: 1px solid transparent; text-align: left; color: #243d46; background: transparent; cursor: pointer; }
+.workbook-item:hover, .workbook-item[aria-current="true"] { border-color: #9bc4b9; background: #e9f6f1; }
+.workbook-kind { color: #146b63; text-transform: uppercase; font-size: 0.58rem; font-weight: 800; letter-spacing: 0.05em; }
+.workbook-item strong { font-size: 0.72rem; }
+.workbook-item code, .workbook-details > code, .workbook-jump code, .workbook-edge-id { font-size: 0.65rem; overflow-wrap: anywhere; }
+.workbook-item small { color: #68797f; font-size: 0.62rem; }
+.workbook-details h3 { margin: 0.3rem 0; overflow-wrap: anywhere; }
+.workbook-details p, .workbook-relations { color: #465f68; font-size: 0.73rem; line-height: 1.5; }
+.workbook-relations { margin-top: 1rem; }
+.workbook-relations h4 { margin: 0 0 0.4rem; font-size: 0.78rem; }
+.workbook-relations li { padding: 0.45rem 0; border-top: 1px solid #dbe3e0; }
+.workbook-jump { border: 0; padding: 0; color: #135e70; background: transparent; text-align: left; text-decoration: underline; cursor: pointer; }
+.workbook-lag, .workbook-edge-id { display: block; margin-top: 0.1rem; }
+.workbook-caveat { padding: 0.5rem; border-left: 3px solid #7a9994; background: #eef4f2; }
+:root[data-theme="dark"] .workbook-explorer { border-color: #38505a; background: #1a2a32; }
+:root[data-theme="dark"] .workbook-explorer > p, :root[data-theme="dark"] .workbook-details p, :root[data-theme="dark"] .workbook-relations, :root[data-theme="dark"] .workbook-item small { color: #aec1c4; }
+:root[data-theme="dark"] .workbook-browser, :root[data-theme="dark"] .workbook-details { border-color: #38505a; color: #e7f1f0; background: #20343e; }
+:root[data-theme="dark"] .workbook-browser > input { border-color: #57717a; color: #e1eeeb; background: #1a2a32; }
+:root[data-theme="dark"] .workbook-tree ul ul, :root[data-theme="dark"] .workbook-relations li { border-color: #38505a; }
+:root[data-theme="dark"] .workbook-kind, :root[data-theme="dark"] .workbook-jump { color: #8be2ce; }
+:root[data-theme="dark"] .workbook-item { color: #e7f1f0; }
+:root[data-theme="dark"] .workbook-item:hover, :root[data-theme="dark"] .workbook-item[aria-current="true"], :root[data-theme="dark"] .workbook-caveat { border-color: #496b6c; background: #29454a; }
+@media (max-width: 700px) { .workbook-layout { grid-template-columns: 1fr; } .workbook-tree { max-height: 320px; } }

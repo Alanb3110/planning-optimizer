@@ -1,5 +1,6 @@
 import { type ChangeEvent, useEffect, useId, useRef, useState } from "react";
 import { ScheduleResults } from "./components/ScheduleResults";
+import { WorkbookExplorer } from "./components/WorkbookExplorer";
 import type { RunSettings } from "./lib/exports";
 import { fetchLocalArrayBuffer } from "./lib/localAsset";
 import type { ValidationIssue, WorkbookImportResult } from "./lib/model";
@@ -270,6 +271,8 @@ function App() {
           {warnings.length > 0 && <IssueGroup title="Warnings" issues={warnings} warning />}
         </section>
       )}
+
+      {project && <WorkbookExplorer key={importGenerationRef.current} project={project} />}
 
       <section className="output-panel" aria-label="Schedule output">
         {!result && !loadError && !isLoading && (
