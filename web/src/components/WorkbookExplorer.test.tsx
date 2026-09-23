@@ -48,7 +48,7 @@ describe("imported workbook explorer (fictional V1 data)", () => {
     expect(screen.getByText("FS · lag 3 h · Active")).toBeInTheDocument();
     expect(screen.getByText("FS · lag 0 h · Inactive")).toBeInTheDocument();
     expect(screen.getByText("FS · lag 1 h · Active")).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: /Fictional dry test.*LOX_DRY_TEST/ }));
+    fireEvent.click(within(screen.getByRole("heading", { name: "Direct predecessors (2)" }).parentElement!).getByRole("button", { name: /Fictional dry test.*LOX_DRY_TEST/ }));
     expect(within(tree).getByRole("button", { name: /LOX_DRY_TEST/ })).toHaveAttribute("aria-current", "true");
     expect(screen.getByRole("heading", { name: "Direct successors (1)" })).toBeInTheDocument();
     expect(screen.getAllByRole("button", { name: /Dry released.*LOX_DRY_RELEASED/ }).length).toBeGreaterThan(0);
