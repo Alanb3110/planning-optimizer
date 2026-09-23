@@ -38,9 +38,11 @@ Verification commands:
 cd web
 npm test
 npm run build
+npx playwright install chromium
+npm run test:browser
 ```
 
-The static production files are written to `web/dist/`. Vite uses a relative base path so the build can run below a GitHub Pages repository path. Deployment is intentionally configured separately.
+The static production files are written to `web/dist/`. Vite uses a relative base path so the build can run below a GitHub Pages repository path. The browser test starts a temporary Vite preview of that build and uses only the fictitious workbook; the Pages build job runs it and the public-data check before deployment.
 
 The `web-v1` branch includes a GitHub Actions workflow that tests and builds `web/`, then publishes only `web/dist/` to GitHub Pages. In the repository Pages settings, select **GitHub Actions** as the deployment source; selecting a branch serves the repository root and its README rather than the Vite build.
 
