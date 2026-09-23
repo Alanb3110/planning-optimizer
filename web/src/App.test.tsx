@@ -85,8 +85,17 @@ describe("AIT Planning Optimizer workspace", () => {
     fireEvent.change(within(form).getByLabelText("Activity calendar"), { target: { value: "DEMO_CALENDAR" } });
     fireEvent.click(within(form).getByRole("button", { name: "Add activity" }));
     expect(screen.getByRole("button", { name: "Edit activity LOX_FICTIONAL_CHECK" })).toBeInTheDocument();
+    expect(screen.getByLabelText("Demands for LOX_FICTIONAL_CHECK")).toHaveTextContent("0 role demand(s) · 0 zone occupancy row(s)");
+    fireEvent.click(screen.getByRole("button", { name: "Add role demand" }));
+    expect(screen.getByLabelText("Edit Activity role demand")).toBeInTheDocument();
+    expect(screen.getByLabelText("Role / pool")).toHaveTextContent("INSTALL_CREW · Installation crew");
+    fireEvent.click(within(screen.getByLabelText("Edit Activity role demand")).getByRole("button", { name: "Cancel" }));
+    fireEvent.click(screen.getByRole("button", { name: "Add zone occupancy" }));
+    expect(screen.getByLabelText("Edit Activity zone occupancy")).toBeInTheDocument();
+    fireEvent.click(within(screen.getByLabelText("Edit Activity zone occupancy")).getByRole("button", { name: "Cancel" }));
     expect(screen.getByRole("button", { name: "Calculate schedule" })).toBeEnabled();
     fireEvent.click(screen.getByRole("button", { name: "Add successor" }));
+    expect(screen.getByLabelText("Successor ID")).toHaveTextContent("PROJECT_COMPLETE · Synthetic project complete");
     fireEvent.change(screen.getByLabelText("Dependency ID"), { target: { value: "DEP_LOX_FICTIONAL" } });
     fireEvent.change(screen.getByLabelText("Successor ID"), { target: { value: "PROJECT_COMPLETE" } });
     fireEvent.change(screen.getByLabelText("Justification"), { target: { value: "Fictional check completed" } });

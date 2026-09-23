@@ -63,7 +63,7 @@ export function ModelEditor({ project, focus, onChange, onSelect, onExport, canE
       : [...project.milestone_priorities, update({ gate_id: gateId, enabled: false })] });
   };
   const options = (type: NodeType) => (type === "ACTIVITY" ? project.activities : project.gates)
-    .map((row) => String(row[type === "ACTIVITY" ? "activity_id" : "gate_id"]));
+    .map((row) => ({ id: String(row[type === "ACTIVITY" ? "activity_id" : "gate_id"]), name: String(row.name ?? "") }));
   const linked = project.dependencies.map((row, index) => ({ row, index })).filter(({ row }) =>
     focus !== null && ((row.source_type === focus.kind && row.source_id === focus.id) ||
     (row.target_type === focus.kind && row.target_id === focus.id)));
@@ -91,7 +91,7 @@ export function ModelEditor({ project, focus, onChange, onSelect, onExport, canE
     </label>
     <label>{side === "source" ? "Predecessor ID" : "Successor ID"}
       <select value={draft[`${side}_id`]} onChange={(event) => setDraft({ ...draft, [`${side}_id`]: event.target.value })} disabled={disabled}>
-        <option value="">Select…</option>{options(draft[`${side}_type`]).map((id) => <option key={id} value={id}>{id}</option>)}
+        <option value="">Select…</option>{options(draft[`${side}_type`]).map(({ id, name }) => <option key={id} value={id}>{name ? `${id} · ${name}` : id}</option>)}
       </select>
     </label>
   </div>;

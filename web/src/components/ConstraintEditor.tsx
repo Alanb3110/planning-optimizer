@@ -57,13 +57,14 @@ export function ConstraintEditor({ project, activityId, onChange, disabled }: {
   const after = new Set(preview.map(issueKey));
   const added = preview.filter((issue) => !before.has(issueKey(issue)));
   const resolved = baseline.filter((issue) => !after.has(issueKey(issue)));
-  const begin = (i: number | null) => {
+  const begin = (i: number | null, table: Kind = kind) => {
+    if (table !== kind) setKind(table);
     setIndex(i);
-    setDraft(i === null ? kind === "resources" ? { type: "HUMAN", capacity: 1, unlimited: false }
-      : kind === "zones" ? { capacity: 1 }
-      : kind === "calendars" ? {}
-      : kind === "activity_resources" ? { activity_id: activityId ?? "", quantity: 1 }
-      : kind === "activity_zones" ? { activity_id: activityId ?? "", load: 1, exclusive: false }
+    setDraft(i === null ? table === "resources" ? { type: "HUMAN", capacity: 1, unlimited: false }
+      : table === "zones" ? { capacity: 1 }
+      : table === "calendars" ? {}
+      : table === "activity_resources" ? { activity_id: activityId ?? "", quantity: 1 }
+      : table === "activity_zones" ? { activity_id: activityId ?? "", load: 1, exclusive: false }
       : { calendar_id: scope, weekday: "MON", shift_name: "", start_time: "08:00", end_time: "16:00", enabled: true }
       : { ...rows[i] });
   };
@@ -94,6 +95,14 @@ export function ConstraintEditor({ project, activityId, onChange, disabled }: {
   return <section className="constraint-editor" aria-label="Resource, zone and calendar editing">
     <h4>Resources, zones and calendars</h4>
     <p>Resources are roles or pools. Activity demands reserve capacity; a zone can be shared up to its capacity or blocked by an exclusive activity.</p>
+    {activityId && <div className="activity-demands" aria-label={`Demands for ${activityId}`}>
+      <strong>Demands for <code>{activityId}</code></strong>
+      <span>{project.activity_resources.filter((row) => row.activity_id === activityId).length} role demand(s) · {project.activity_zones.filter((row) => row.activity_id === activityId).length} zone occupancy row(s)</span>
+      <div className="model-row-actions">
+        <button type="button" onClick={() => begin(null, "activity_resources")} disabled={disabled}>Add role demand</button>
+        <button type="button" onClick={() => begin(null, "activity_zones")} disabled={disabled}>Add zone occupancy</button>
+      </div>
+    </div>}
     <label>Constraint table<select aria-label="Constraint table" value={kind} onChange={(event) => { setKind(event.target.value as Kind); setDraft(null); }} disabled={disabled}>
       {(Object.keys(labels) as Kind[]).map((key) => <option key={key} value={key}>{labels[key]}</option>)}
     </select></label>
@@ -110,7 +119,12 @@ export function ConstraintEditor({ project, activityId, onChange, disabled }: {
       {fields[kind].map((field) => <label key={field.key}>{field.label}
         {field.type === "checkbox" ? <input type="checkbox" checked={draft[field.key] === true} disabled={disabled} onChange={(event) => update(field.key, event.target.checked)} />
           : field.type === "select" ? <select value={str(draft[field.key])} disabled={disabled || (index !== null && (ids[kind] === field.key || (Boolean(activityId) && field.key === "activity_id")))} onChange={(event) => update(field.key, event.target.value)}>
-            <option value="">Select…</option>{(field.options ?? options(field.key)).map((value) => <option key={value} value={value}>{value}</option>)}
+            <option value="">Select…</option>{(field.options ?? options(field.key)).map((value) => {
+              const collection = field.key === "activity_id" ? project.activities : field.key === "resource_id" ? project.resources
+                : field.key === "zone_id" ? project.zones : field.key === "calendar_id" ? project.calendars : [];
+              const name = collection.find((row) => row[field.key] === value)?.name;
+              return <option key={value} value={value}>{name ? `${value} · ${String(name)}` : value}</option>;
+            })}
           </select> : <input type={field.type ?? "text"} step={field.type === "number" ? "any" : undefined}
             value={str(draft[field.key])} disabled={disabled || (index !== null && ids[kind] === field.key)}
             onChange={(event) => update(field.key, field.type === "number" && event.target.value !== "" ? Number(event.target.value) : event.target.value)} />}

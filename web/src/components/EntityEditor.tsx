@@ -96,12 +96,15 @@ export function EntityEditor({ project, focus, onChange, onSelect, disabled }: {
 
   return <section className="entity-editor" aria-label="Edit workbook entities">
     <h4>Systems, packages, activities and gates</h4>
-    <div className="model-row-actions">
-      {(["SYSTEM", "PACKAGE", "ACTIVITY", "GATE"] as Kind[]).map((value) =>
-        <button type="button" key={value} onClick={() => start(value)} disabled={disabled}>Add {value.toLowerCase()}</button>)}
+    {focus && <div className="model-row-actions contextual-actions">
+      {focus?.kind === "PACKAGE" && <button type="button" onClick={() => start("ACTIVITY")} disabled={disabled}>Add activity to {focus.id}</button>}
       {focus && <button type="button" onClick={() => start(focus.kind, true)} disabled={disabled}>Edit {focus.kind.toLowerCase()} {focus.id}</button>}
       {(focus?.kind === "ACTIVITY" || focus?.kind === "PACKAGE") &&
         <button type="button" onClick={duplicate} disabled={disabled}>Duplicate {focus.kind.toLowerCase()} {focus.id}</button>}
+    </div>}
+    <div className="model-row-actions general-actions">
+      {(["SYSTEM", "PACKAGE", "ACTIVITY", "GATE"] as Kind[]).map((value) =>
+        <button type="button" key={value} onClick={() => start(value)} disabled={disabled}>Add {value.toLowerCase()}</button>)}
     </div>
     {kind && <div className="model-fields" aria-label={`${editing ? "Edit" : "New"} ${kind.toLowerCase()} form`}>
       <h4>{editing ? `Edit ${focus?.id}` : `New ${kind.toLowerCase()}`}</h4>
@@ -125,6 +128,7 @@ export function EntityEditor({ project, focus, onChange, onSelect, disabled }: {
         {choice("calendar_id", "Activity calendar", calendars)}
         {checkbox("preemptible", "Interruptible")}{checkbox("requires_system_arrival", "Requires system arrival")}
         {checkbox("enabled", "Enabled")}{field("notes", "Notes")}
+        <p className="activity-next-step">After saving, review role demand, zone occupancy and FS links for this activity. They are edited in the selected activity view.</p>
       </>}
       {kind === "GATE" && <>
         {choice("system_id", "System (optional)", systems)}{choice("package_id", "Package (optional)", packages)}
