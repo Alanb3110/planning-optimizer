@@ -1,6 +1,7 @@
 import { useState } from "react";
 import type { NormalizedProject, NormalizedRecord } from "../lib/model";
 import { EntityEditor } from "./EntityEditor";
+import { ConstraintEditor } from "./ConstraintEditor";
 
 type NodeType = "ACTIVITY" | "GATE";
 type Draft = { dependency_id: string; source_type: NodeType; source_id: string; target_type: NodeType; target_id: string; lag_h: string; rationale: string; enabled: boolean };
@@ -97,6 +98,7 @@ export function ModelEditor({ project, focus, onChange, onSelect, onExport, canE
 
   return <div className="model-editor" aria-label="Model editing">
     <EntityEditor project={project} focus={focus} onChange={onChange} onSelect={onSelect} disabled={disabled} />
+    <ConstraintEditor project={project} activityId={focus?.kind === "ACTIVITY" ? focus.id : undefined} onChange={onChange} disabled={disabled} />
     {(focus?.kind === "ACTIVITY" || focus?.kind === "GATE") && <>
     <h4>Dependencies for {focus.id}</h4>
     {linked.length ? <ul className="model-dependencies">{linked.map(({ row, index }) => <li key={index}>
