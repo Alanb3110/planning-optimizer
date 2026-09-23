@@ -135,7 +135,7 @@ export function EntityEditor({ project, focus, onChange, onSelect, disabled }: {
         <button type="button" onClick={() => { setKind(null); setError(""); }} disabled={disabled}>Cancel</button></div>
       {error && <p role="alert">{error}</p>}
     </div>}
-    <p>New activities have no resource or zone demand until modeled in a later revision or in the workbook. Review these constraints before operational use. After adding an activity, link existing gates or activities with Add predecessor / Add successor; set an FS lag and justification.</p>
+    <p>New activities have no resource or zone demand until you add it in Resources, zones and calendars. Review these constraints before operational use. After adding an activity, link existing gates or activities with Add predecessor / Add successor; set an FS lag and justification.</p>
     <p>Duplicating a package copies its activities, package gates, resource and zone demands, and links internal to that package. Cross-package links and milestone priorities require explicit review.</p>
   </section>;
 }
