@@ -332,16 +332,27 @@ td > strong { color: #183641; }
   .issue-group li { grid-template-columns: 1fr; gap: 0.2rem; }
 }
 
-:root[data-theme="dark"] { color-scheme: dark; color: #e2eceb; background: #101b21; }
-:root[data-theme="dark"] body { background: #101b21; }
-:root[data-theme="dark"] .build-version { color: #aec1c4; }
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  color: #edf3f1;
+  background: #080a0c;
+  --dark-panel: #15191c;
+  --dark-raised: #20262a;
+  --dark-input: #0c1012;
+  --dark-border: #445156;
+  --dark-muted: #b8c5c4;
+  --dark-accent: #85ead2;
+}
+:root[data-theme="dark"] body { background: #080a0c; }
+:root[data-theme="dark"] .build-version { color: var(--dark-muted); }
 :root[data-theme="dark"] .app-header,
 :root[data-theme="dark"] .control-panel,
 :root[data-theme="dark"] .validation-strip,
 :root[data-theme="dark"] .issues-panel,
 :root[data-theme="dark"] .output-panel,
 :root[data-theme="dark"] .result-section,
-:root[data-theme="dark"] .result-metrics { border-color: #38505a; background: #1a2a32; box-shadow: none; }
+:root[data-theme="dark"] .result-metrics,
+:root[data-theme="dark"] .workbook-explorer { border-color: var(--dark-border); background: var(--dark-panel); box-shadow: none; }
 :root[data-theme="dark"] h1,
 :root[data-theme="dark"] h2,
 :root[data-theme="dark"] h3,
@@ -351,33 +362,37 @@ td > strong { color: #183641; }
 :root[data-theme="dark"] .model-counts strong,
 :root[data-theme="dark"] .export-toolbar strong,
 :root[data-theme="dark"] .metric strong,
-:root[data-theme="dark"] td > strong { color: #e7f1f0; }
+:root[data-theme="dark"] td > strong { color: #f2f7f5; }
 :root[data-theme="dark"] .product-code,
 :root[data-theme="dark"] .step-index,
 :root[data-theme="dark"] .section-kicker,
 :root[data-theme="dark"] .state-code,
 :root[data-theme="dark"] .browse-label,
-:root[data-theme="dark"] .privacy-note strong { color: #7adbc4; }
-:root[data-theme="dark"] .privacy-dot { background: #48cfad; box-shadow: 0 0 0 4px #254d48; }
+:root[data-theme="dark"] .privacy-note strong { color: var(--dark-accent); }
+:root[data-theme="dark"] .privacy-dot { background: #60dabc; box-shadow: 0 0 0 4px #25433c; }
 :root[data-theme="dark"] .theme-toggle,
 :root[data-theme="dark"] .file-type,
 :root[data-theme="dark"] .local-badge,
 :root[data-theme="dark"] .basis-badge,
-:root[data-theme="dark"] .gate-badge { border-color: #496b6c; color: #b0e5d8; background: #203b40; }
+:root[data-theme="dark"] .gate-badge { border-color: #58756f; color: #c9f3e7; background: #1d312e; }
 :root[data-theme="dark"] .file-picker,
 :root[data-theme="dark"] .number-input,
 :root[data-theme="dark"] .secondary-button,
-:root[data-theme="dark"] .cancel-button { border-color: #57717a; color: #e1eeeb; background: #20343e; }
+:root[data-theme="dark"] .cancel-button { border-color: #617579; color: #e9f1ef; background: var(--dark-raised); }
 :root[data-theme="dark"] .file-picker:hover,
-:root[data-theme="dark"] .secondary-button:hover:not(:disabled) { background: #29454a; }
+:root[data-theme="dark"] .secondary-button:hover:not(:disabled),
+:root[data-theme="dark"] .cancel-button:hover:not(:disabled) { border-color: var(--dark-accent); background: #2b3d39; }
 :root[data-theme="dark"] .upload-icon,
 :root[data-theme="dark"] .primary-button,
-:root[data-theme="dark"] .export-button { background: #146b60; }
+:root[data-theme="dark"] .export-button { border-color: #36b297; color: #fff; background: #117e6b; }
+:root[data-theme="dark"] .primary-button:hover:not(:disabled),
+:root[data-theme="dark"] .export-button:hover { background: #0d6c5b; }
+:root[data-theme="dark"] .primary-button:disabled { opacity: 1; border-color: #43504e; color: #afc2bd; background: #28312f; }
 :root[data-theme="dark"] .settings-grid > label,
 :root[data-theme="dark"] .number-input input,
 :root[data-theme="dark"] .terminal-state,
 :root[data-theme="dark"] table,
-:root[data-theme="dark"] .gantt { color: #dceae8; }
+:root[data-theme="dark"] .gantt { color: #edf3f1; }
 :root[data-theme="dark"] .file-picker small,
 :root[data-theme="dark"] .selection-status small,
 :root[data-theme="dark"] .settings-grid small,
@@ -392,47 +407,49 @@ td > strong { color: #183641; }
 :root[data-theme="dark"] .gantt-legend,
 :root[data-theme="dark"] .row-count,
 :root[data-theme="dark"] td > code,
-:root[data-theme="dark"] td > small { color: #aec1c4; }
+:root[data-theme="dark"] td > small,
+:root[data-theme="dark"] .privacy-note span:last-child,
+:root[data-theme="dark"] .or-label { color: var(--dark-muted); }
 :root[data-theme="dark"] .selection-status,
 :root[data-theme="dark"] .validation-state,
 :root[data-theme="dark"] .model-counts div,
 :root[data-theme="dark"] .section-heading,
 :root[data-theme="dark"] .metric,
-:root[data-theme="dark"] td { border-color: #344a53; }
-:root[data-theme="dark"] .text-button { color: #b8d0d0; }
+:root[data-theme="dark"] td { border-color: var(--dark-border); }
+:root[data-theme="dark"] .text-button { color: #c4e5dd; }
 :root[data-theme="dark"] .progress-state > div:last-child,
-:root[data-theme="dark"] .download-status { color: #b9d5d0; }
-:root[data-theme="dark"] .progress-state strong { color: #8be2ce; }
+:root[data-theme="dark"] .download-status { color: var(--dark-muted); }
+:root[data-theme="dark"] .progress-state strong { color: var(--dark-accent); }
 :root[data-theme="dark"] .issue-group.warnings h3 { color: #e3bf6a; }
-:root[data-theme="dark"] .legend-gap { border-color: #8aaba8; background: #243d45; }
-:root[data-theme="dark"] .issues-panel .issue-group li { color: #e7cbc9; background: #3a272b; }
-:root[data-theme="dark"] .issues-panel .issue-group.warnings li { color: #f0dcad; background: #393326; }
+:root[data-theme="dark"] .legend-gap { border-color: #899c97; background: #30383a; }
+:root[data-theme="dark"] .issues-panel .issue-group li { color: #f3d5d1; background: #382427; }
+:root[data-theme="dark"] .issues-panel .issue-group.warnings li { color: #f7e3b0; background: #372e1e; }
 :root[data-theme="dark"] .issue-group code { color: #f0aaa3; }
 :root[data-theme="dark"] .issue-group.warnings code { color: #f3d28c; }
-:root[data-theme="dark"] .terminal-state { background: #1b2d35; }
+:root[data-theme="dark"] .terminal-state { background: #1a2422; }
 :root[data-theme="dark"] .terminal-state.invalid,
-:root[data-theme="dark"] .terminal-state.error { background: #302529; }
-:root[data-theme="dark"] .terminal-state.infeasible { background: #332d26; }
-:root[data-theme="dark"] .schedule-output { background: #14232b; }
-:root[data-theme="dark"] .export-toolbar { border-color: #3d645c; background: #203b3c; }
-:root[data-theme="dark"] .metric.primary { background: #114a4c; }
+:root[data-theme="dark"] .terminal-state.error { background: #2c2023; }
+:root[data-theme="dark"] .terminal-state.infeasible { background: #30291e; }
+:root[data-theme="dark"] .schedule-output { background: #0e1113; }
+:root[data-theme="dark"] .export-toolbar { border-color: #547a70; background: #1b302b; }
+:root[data-theme="dark"] .metric.primary { background: #1a3832; }
 :root[data-theme="dark"] .gantt-axis-label,
 :root[data-theme="dark"] .gantt-axis,
-:root[data-theme="dark"] th { border-color: #445c63; color: #c1d5d4; background: #253943; }
+:root[data-theme="dark"] th { border-color: var(--dark-border); color: #d0ddda; background: #272e31; }
 :root[data-theme="dark"] .gantt-axis span,
-:root[data-theme="dark"] .gantt-axis-label { color: #c1d5d4; }
-:root[data-theme="dark"] .gantt-system { background: #152b36; }
-:root[data-theme="dark"] .gantt-package { color: #e0edeb; background: color-mix(in srgb, var(--system-color) 25%, #20323b); }
+:root[data-theme="dark"] .gantt-axis-label { color: #d0ddda; }
+:root[data-theme="dark"] .gantt-system { background: #1b2225; }
+:root[data-theme="dark"] .gantt-package { color: #edf3f1; background: color-mix(in srgb, var(--system-color) 25%, #22292c); }
 :root[data-theme="dark"] .gantt-package span { color: #cde6e1; }
-:root[data-theme="dark"] .gantt-label { border-color: #344a53; background: #1a2a32; }
-:root[data-theme="dark"] .gantt-label span { color: #a9bec1; }
-:root[data-theme="dark"] .gantt-track { border-color: #344a53; background: repeating-linear-gradient(90deg, #1a2a32 0, #1a2a32 119px, #20333b 120px); }
-:root[data-theme="dark"] .gantt-gridline { background: #344a53; }
-:root[data-theme="dark"] tbody tr:hover td { background: #263d45; }
-:root[data-theme="dark"] .system-entity { background: #305061; }
-:root[data-theme="dark"] .package-entity { color: #d1f4e9; background: #23544b; }
-:root[data-theme="dark"] .empty-grid span { border-color: #344a53; }
-:root[data-theme="dark"] .progress-track { background: #334c52; }
+:root[data-theme="dark"] .gantt-label { border-color: var(--dark-border); background: var(--dark-panel); }
+:root[data-theme="dark"] .gantt-label span { color: var(--dark-muted); }
+:root[data-theme="dark"] .gantt-track { border-color: var(--dark-border); background: repeating-linear-gradient(90deg, #15191c 0, #15191c 119px, #20262a 120px); }
+:root[data-theme="dark"] .gantt-gridline { background: var(--dark-border); }
+:root[data-theme="dark"] tbody tr:hover td { background: #28332f; }
+:root[data-theme="dark"] .system-entity { background: #34534d; }
+:root[data-theme="dark"] .package-entity { color: #d1f4e9; background: #225d4e; }
+:root[data-theme="dark"] .empty-grid span { border-color: #343e41; }
+:root[data-theme="dark"] .progress-track { background: #33443f; }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
@@ -448,10 +465,10 @@ td > strong { color: #183641; }
 .explanation-content li { margin: 0.25rem 0; overflow-wrap: anywhere; }
 .explanation-caveat { padding: 0.65rem; border-left: 3px solid #758e91; background: #f2f6f5; }
 .activity-inspect { border: 0; padding: 0; color: #135e70; background: transparent; font: inherit; font-weight: 750; text-align: left; text-decoration: underline; cursor: pointer; }
-:root[data-theme="dark"] .explanation-content, :root[data-theme="dark"] .explanation .section-heading label { color: #d0e3e0; }
-:root[data-theme="dark"] .explanation select { border-color: #57717a; background: #20343e; color: #e1eeeb; }
-:root[data-theme="dark"] .explanation-caveat { background: #243941; }
-:root[data-theme="dark"] .activity-inspect { color: #8be2ce; }
+:root[data-theme="dark"] .explanation-content, :root[data-theme="dark"] .explanation .section-heading label { color: #d8e5e1; }
+:root[data-theme="dark"] .explanation select { border-color: #63777b; background: var(--dark-input); color: #edf3f1; }
+:root[data-theme="dark"] .explanation-caveat { background: #252f30; }
+:root[data-theme="dark"] .activity-inspect { color: var(--dark-accent); }
 
 .workbook-explorer { min-width: 0; border: 1px solid #d6dcda; background: #fff; padding: 1rem; }
 .workbook-explorer > p { color: #5b7178; font-size: 0.74rem; line-height: 1.5; }
@@ -479,14 +496,15 @@ td > strong { color: #183641; }
 .workbook-jump { border: 0; padding: 0; color: #135e70; background: transparent; text-align: left; text-decoration: underline; cursor: pointer; }
 .workbook-lag, .workbook-edge-id { display: block; margin-top: 0.1rem; }
 .workbook-caveat { padding: 0.5rem; border-left: 3px solid #7a9994; background: #eef4f2; }
-:root[data-theme="dark"] .workbook-explorer { border-color: #38505a; background: #1a2a32; }
-:root[data-theme="dark"] .workbook-explorer > p, :root[data-theme="dark"] .workbook-details p, :root[data-theme="dark"] .workbook-relations, :root[data-theme="dark"] .workbook-item small { color: #aec1c4; }
-:root[data-theme="dark"] .workbook-browser, :root[data-theme="dark"] .workbook-details { border-color: #38505a; color: #e7f1f0; background: #20343e; }
-:root[data-theme="dark"] .workbook-browser > input { border-color: #57717a; color: #e1eeeb; background: #1a2a32; }
-:root[data-theme="dark"] .workbook-tree ul ul, :root[data-theme="dark"] .workbook-relations li { border-color: #38505a; }
-:root[data-theme="dark"] .workbook-kind, :root[data-theme="dark"] .workbook-jump { color: #8be2ce; }
-:root[data-theme="dark"] .workbook-item { color: #e7f1f0; }
-:root[data-theme="dark"] .workbook-item:hover, :root[data-theme="dark"] .workbook-item[aria-current="true"], :root[data-theme="dark"] .workbook-caveat { border-color: #496b6c; background: #29454a; }
+:root[data-theme="dark"] .workbook-explorer { border-color: var(--dark-border); background: var(--dark-panel); }
+:root[data-theme="dark"] .workbook-explorer > p, :root[data-theme="dark"] .workbook-details p, :root[data-theme="dark"] .workbook-relations, :root[data-theme="dark"] .workbook-item small { color: var(--dark-muted); }
+:root[data-theme="dark"] .workbook-browser, :root[data-theme="dark"] .workbook-details { border-color: var(--dark-border); color: #edf3f1; background: var(--dark-raised); }
+:root[data-theme="dark"] .workbook-browser > input { border-color: #63777b; color: #edf3f1; background: var(--dark-input); }
+:root[data-theme="dark"] .workbook-tree ul ul, :root[data-theme="dark"] .workbook-relations li { border-color: var(--dark-border); }
+:root[data-theme="dark"] .workbook-kind, :root[data-theme="dark"] .workbook-jump { color: var(--dark-accent); }
+:root[data-theme="dark"] .workbook-item { color: #edf3f1; }
+:root[data-theme="dark"] .workbook-item:hover, :root[data-theme="dark"] .workbook-item[aria-current="true"] { border-color: #79dcc4; background: #2b453e; }
+:root[data-theme="dark"] .workbook-caveat { border-color: #73928b; background: #2b3535; }
 @media (max-width: 700px) { .workbook-layout { grid-template-columns: 1fr; } .workbook-tree { max-height: 320px; } }
 .model-editor { border-top: 1px solid #d6dcda; padding-top: 0.8rem; margin-top: 1rem; color: #23414a; }
 .entity-editor { border-bottom: 1px solid #d6dcda; padding-bottom: 0.8rem; }
@@ -513,9 +531,20 @@ td > strong { color: #183641; }
 .model-all-priorities summary { cursor: pointer; color: #146b63; font-weight: 700; }
 .model-export { border-top: 1px solid #dbe3e0; margin-top: 0.9rem; padding-top: 0.4rem; }
 .revision-comment { margin: 1rem 0 0.3rem; }
-:root[data-theme="dark"] .model-editor, :root[data-theme="dark"] .model-fields, :root[data-theme="dark"] .model-export { color: #e7f1f0; border-color: #38505a; }
-:root[data-theme="dark"] .model-editor input, :root[data-theme="dark"] .model-editor select { border-color: #57717a; color: #e1eeeb; background: #20343e; }
-:root[data-theme="dark"] .model-dependencies li, :root[data-theme="dark"] .model-priority { border-color: #38505a; }
-:root[data-theme="dark"] .model-editor button { color: #b2eee0; background: #29454a; border-color: #4c7975; }
-:root[data-theme="dark"] .model-all-priorities summary { color: #8be2ce; }
+:root[data-theme="dark"] .model-editor, :root[data-theme="dark"] .model-fields, :root[data-theme="dark"] .model-export,
+:root[data-theme="dark"] .entity-editor { color: #edf3f1; border-color: var(--dark-border); }
+:root[data-theme="dark"] .model-editor input, :root[data-theme="dark"] .model-editor select { border-color: #63777b; color: #edf3f1; background: var(--dark-input); }
+:root[data-theme="dark"] .model-editor input:disabled { color: #bcc9c5; background: #282d2f; }
+:root[data-theme="dark"] .model-dependencies li, :root[data-theme="dark"] .model-priority { border-color: var(--dark-border); }
+:root[data-theme="dark"] .model-editor button { color: #e4f7f1; background: #2b413b; border-color: #668c81; }
+:root[data-theme="dark"] .model-editor button:hover:not(:disabled) { border-color: var(--dark-accent); background: #365b4e; }
+:root[data-theme="dark"] .model-editor button:disabled { opacity: 1; color: #9eafaa; background: #242b2a; border-color: #43504e; }
+:root[data-theme="dark"] .model-all-priorities summary { color: var(--dark-accent); }
+:root[data-theme="dark"] :is(button, input, select, summary, .file-picker, [tabindex="0"]):focus-visible {
+  outline: 2px solid var(--dark-accent);
+  outline-offset: 2px;
+}
+:root[data-theme="dark"] :is(.number-input, .workbook-browser > input, .model-editor input, .model-editor select, .explanation select):focus-within {
+  border-color: var(--dark-accent);
+}
 @media (max-width: 900px) { .model-fields { grid-template-columns: 1fr; } .model-priority { grid-template-columns: 1fr 1fr; } .model-priority code { grid-column: 1 / -1; } }
