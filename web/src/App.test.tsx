@@ -74,9 +74,17 @@ describe("AIT Planning Optimizer workspace", () => {
     render(<App />);
     selectWorkbook("synthetic_project.xlsx");
     await screen.findByText("Workbook accepted");
+    expect(screen.queryByRole("button", { name: "Add predecessor" })).not.toBeInTheDocument();
+    expect(screen.getByText("Manage all gate priorities")).toBeInTheDocument();
+    fireEvent.click(within(screen.getByLabelText("Systems, packages, activities and gates"))
+      .getByRole("button", { name: /PROJECT_COMPLETE/ }));
+    expect(screen.getByRole("button", { name: "Add predecessor" })).toBeInTheDocument();
+    expect(screen.getByText("Priority for this gate")).toBeInTheDocument();
+    expect(document.querySelectorAll(".model-dependencies li").length).toBeLessThan(10);
+    expect(screen.queryByLabelText("FS dependency form")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Add successor" }));
+    expect(screen.getByLabelText("Predecessor ID")).toHaveValue("PROJECT_COMPLETE");
     fireEvent.change(screen.getByLabelText("Dependency ID"), { target: { value: "DEP_CYCLE" } });
-    fireEvent.change(screen.getByLabelText("Predecessor type"), { target: { value: "GATE" } });
-    fireEvent.change(screen.getByLabelText("Predecessor ID"), { target: { value: "PROJECT_COMPLETE" } });
     fireEvent.change(screen.getByLabelText("Successor type"), { target: { value: "ACTIVITY" } });
     fireEvent.change(screen.getByLabelText("Successor ID"), { target: { value: "PREPARE_FOUNDATION" } });
     fireEvent.change(screen.getByLabelText("Justification"), { target: { value: "Fictional cycle for validation" } });

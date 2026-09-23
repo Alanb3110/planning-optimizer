@@ -488,23 +488,33 @@ td > strong { color: #183641; }
 :root[data-theme="dark"] .workbook-item { color: #e7f1f0; }
 :root[data-theme="dark"] .workbook-item:hover, :root[data-theme="dark"] .workbook-item[aria-current="true"], :root[data-theme="dark"] .workbook-caveat { border-color: #496b6c; background: #29454a; }
 @media (max-width: 700px) { .workbook-layout { grid-template-columns: 1fr; } .workbook-tree { max-height: 320px; } }
-.model-editor { border: 1px solid #d6dcda; background: #fff; padding: 1rem; margin-top: 1rem; color: #23414a; }
+.model-editor { border-top: 1px solid #d6dcda; padding-top: 0.8rem; margin-top: 1rem; color: #23414a; }
 .model-editor h3 { font-size: 1rem; margin: 1rem 0 0.4rem; }
+.model-editor h4 { margin: 0.7rem 0 0.4rem; font-size: 0.78rem; }
 .model-editor p, .model-dependencies { font-size: 0.78rem; line-height: 1.5; }
-.model-dependencies { list-style: none; padding: 0; max-height: 260px; overflow: auto; }
-.model-dependencies li { border-top: 1px solid #dbe3e0; padding: 0.4rem 0; }
-.model-editor button { margin: 0.2rem; padding: 0.35rem 0.5rem; cursor: pointer; }
+.model-dependencies { list-style: none; padding: 0; max-height: 220px; overflow: auto; }
+.model-dependencies li { border-top: 1px solid #dbe3e0; padding: 0.5rem 0; overflow-wrap: anywhere; }
+.model-row-actions { display: flex; flex-wrap: wrap; gap: 0.3rem; margin-top: 0.25rem; }
+.model-editor button { padding: 0.36rem 0.55rem; cursor: pointer; color: #155c59; background: #e7f5f0; border: 1px solid #a7cfc2; border-radius: 3px; font-size: 0.7rem; }
 .model-editor button:disabled { cursor: default; }
-.model-fields { display: flex; flex-wrap: wrap; gap: 0.6rem; align-items: end; margin: 0.6rem 0 1.2rem; }
+.model-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.6rem; align-items: end; margin: 0.8rem 0; padding: 0.7rem; border: 1px solid #d6dcda; }
+.model-fields h4, .model-fields [role="alert"] { grid-column: 1 / -1; }
 .model-fields label, .model-priority label, .revision-comment { display: flex; flex-direction: column; gap: 0.2rem; font-size: 0.7rem; }
-.model-fields input, .model-fields select, .model-priority input, .revision-comment input { padding: 0.4rem; border: 1px solid #a9bdbb; background: #fff; color: #23414a; max-width: 22rem; }
-.model-endpoint { display: flex; gap: 0.4rem; }
+.model-fields input, .model-fields select, .model-priority input, .revision-comment input { box-sizing: border-box; width: 100%; padding: 0.4rem; border: 1px solid #a9bdbb; background: #fff; color: #23414a; }
+.model-endpoint { display: grid; grid-template-columns: minmax(5rem, 0.7fr) minmax(0, 1.3fr); gap: 0.4rem; }
 .model-fields .model-checkbox, .model-priority label:has(input[type="checkbox"]) { flex-direction: row; align-items: center; }
 .model-priorities { max-height: 350px; overflow: auto; }
-.model-priority { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; padding: 0.4rem 0; border-top: 1px solid #dbe3e0; }
+.model-priority { display: grid; grid-template-columns: minmax(8rem, 1.5fr) auto 4rem minmax(5rem, 1fr); align-items: center; gap: 0.5rem; padding: 0.4rem 0; border-top: 1px solid #dbe3e0; }
 .model-priority code { min-width: 10rem; overflow-wrap: anywhere; }
 .model-priority input[type="number"] { width: 5rem; }
+.model-priority input[type="checkbox"] { width: auto; }
+.model-all-priorities { margin-top: 0.8rem; font-size: 0.75rem; }
+.model-all-priorities summary { cursor: pointer; color: #146b63; font-weight: 700; }
+.model-export { border-top: 1px solid #dbe3e0; margin-top: 0.9rem; padding-top: 0.4rem; }
 .revision-comment { margin: 1rem 0 0.3rem; }
-:root[data-theme="dark"] .model-editor { color: #e7f1f0; border-color: #38505a; background: #1a2a32; }
+:root[data-theme="dark"] .model-editor, :root[data-theme="dark"] .model-fields, :root[data-theme="dark"] .model-export { color: #e7f1f0; border-color: #38505a; }
 :root[data-theme="dark"] .model-editor input, :root[data-theme="dark"] .model-editor select { border-color: #57717a; color: #e1eeeb; background: #20343e; }
 :root[data-theme="dark"] .model-dependencies li, :root[data-theme="dark"] .model-priority { border-color: #38505a; }
+:root[data-theme="dark"] .model-editor button { color: #b2eee0; background: #29454a; border-color: #4c7975; }
+:root[data-theme="dark"] .model-all-priorities summary { color: #8be2ce; }
+@media (max-width: 900px) { .model-fields { grid-template-columns: 1fr; } .model-priority { grid-template-columns: 1fr 1fr; } .model-priority code { grid-column: 1 / -1; } }

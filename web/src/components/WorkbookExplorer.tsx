@@ -1,4 +1,4 @@
-import { useId, useMemo, useState } from "react";
+import { useId, useMemo, useState, type ReactNode } from "react";
 import type { SchedulingDependency, SchedulingProject } from "../lib/scheduler/types";
 
 type Kind = "SYSTEM" | "PACKAGE" | "ACTIVITY" | "GATE";
@@ -11,7 +11,10 @@ const matches = (entity: Entity, query: string) =>
   `${entity.id} ${entity.name}`.toLocaleLowerCase().includes(query);
 const keyOf = (kind: Kind, id: string) => `${kind}:${id}`;
 
-export function WorkbookExplorer({ project }: { project: SchedulingProject }) {
+export function WorkbookExplorer({ project, renderEditor }: {
+  project: SchedulingProject;
+  renderEditor?: (selected: { kind: Kind; id: string } | null) => ReactNode;
+}) {
   const searchId = useId();
   const [query, setQuery] = useState("");
   const [selection, setSelection] = useState<string | null>(null);
@@ -131,7 +134,9 @@ export function WorkbookExplorer({ project }: { project: SchedulingProject }) {
             {relationList("in")}{relationList("out")}
             <p className="workbook-caveat">Follow a linked element to inspect the next step. Inactive links are shown for review and do not constrain the schedule. This view does not calculate a critical path.</p>
           </>}
-        </> : <p>Select an element to see its direct links. Search for a gate such as LOX_DRY_RELEASED, then follow its predecessors.</p>}
+          {renderEditor?.({ kind: selected.kind, id: selected.id })}
+        </> : <><p>Select an element to see its direct links. Search for a gate such as LOX_DRY_RELEASED, then follow its predecessors.</p>
+          {renderEditor?.(null)}</>}
       </div>
     </div>
   </section>;

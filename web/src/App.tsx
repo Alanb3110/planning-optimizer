@@ -314,11 +314,10 @@ function App() {
         </section>
       )}
 
-      {project && <>
-        <WorkbookExplorer key={importGenerationRef.current} project={project} />
-        <ModelEditor key={`edit-${importGenerationRef.current}`} project={result!.data} onChange={updateModel}
-          onExport={downloadRevision} canExport={result!.isValid} disabled={isSolving} />
-      </>}
+      {project && <WorkbookExplorer key={importGenerationRef.current} project={project}
+        renderEditor={(selection) => <ModelEditor key={selection ? `${selection.kind}:${selection.id}` : "none"}
+          project={result!.data} focus={selection} onChange={updateModel}
+          onExport={downloadRevision} canExport={result!.isValid} disabled={isSolving} />} />}
 
       <section className="output-panel" aria-label="Schedule output">
         {!result && !loadError && !isLoading && (
