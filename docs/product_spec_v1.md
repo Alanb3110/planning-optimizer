@@ -88,6 +88,8 @@ A Zone has numeric capacity. Normal Activities consume a numeric load. An exclus
 
 A Calendar defines timezone, validity dates, and recurring weekday shifts. Cross-midnight shifts are allowed. The active project calendar applies when an Activity has no explicit calendar. Resource and Zone calendars further restrict `WORK_TIME` availability.
 
+Shift weekdays, times and validity dates are interpreted in each Calendar's own IANA timezone. A cross-midnight shift is anchored on its starting local date. The hourly scheduling grid counts elapsed instants from `project_start`; the intersection of Calendar windows is made on that grid. On a daylight-saving transition, a missing local boundary advances to the first real time after the gap; a repeated boundary uses the earlier instant for a shift start and the later instant for its end. A slot is available only when its full elapsed hour falls inside a shift.
+
 ## 5. Input and validation
 
 The V1 import format is an Excel workbook with these worksheets:

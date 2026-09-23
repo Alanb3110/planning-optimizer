@@ -13,14 +13,6 @@ const WEEKDAY: Record<string, number> = {
 const HOUR_MS = 3_600_000;
 const DAY_MS = 24 * HOUR_MS;
 
-function parseOffsetMinutes(value: string): number {
-  if (value.endsWith("Z")) return 0;
-  const match = value.match(/([+-])(\d{2}):(\d{2})$/);
-  if (!match) throw new Error(`Date-time '${value}' must include a UTC offset.`);
-  const minutes = Number(match[2]) * 60 + Number(match[3]);
-  return match[1] === "+" ? minutes : -minutes;
-}
-
 function parseClock(value: string): number {
   const match = value.match(/^(\d{2}):(\d{2})$/);
   if (!match) throw new Error(`Invalid shift time '${value}'.`);
@@ -29,6 +21,32 @@ function parseClock(value: string): number {
 
 function dateKey(dateMs: number): string {
   return new Date(dateMs).toISOString().slice(0, 10);
+}
+
+function localParts(formatter: Intl.DateTimeFormat, instant: number): number[] {
+  const parts = Object.fromEntries(
+    formatter.formatToParts(new Date(instant)).filter((part) => part.type !== "literal")
+      .map((part) => [part.type, Number(part.value)]),
+  );
+  return [parts.year, parts.month, parts.day, parts.hour, parts.minute];
+}
+
+function localAsUtc(parts: number[]): number {
+  return Date.UTC(parts[0], parts[1] - 1, parts[2], parts[3], parts[4]);
+}
+
+function localBoundary(formatter: Intl.DateTimeFormat, wallMs: number, end: boolean): number {
+  // Offsets on either side of the wall time cover both sides of a DST transition.
+  const offsets = new Set([-DAY_MS, DAY_MS].map((delta) => {
+    const probe = wallMs + delta;
+    return localAsUtc(localParts(formatter, probe)) - probe;
+  }));
+  const candidates = [...offsets].map((offset) => wallMs - offset);
+  const valid = candidates.filter((instant) => localAsUtc(localParts(formatter, instant)) === wallMs);
+  if (valid.length) return end ? Math.max(...valid) : Math.min(...valid);
+  // A nonexistent wall time is advanced to the first real time after the gap.
+  const future = candidates.filter((instant) => localAsUtc(localParts(formatter, instant)) > wallMs);
+  return Math.min(...(future.length ? future : candidates));
 }
 
 export function hourOffset(projectStart: string, value: string): number {
@@ -46,8 +64,6 @@ export function buildCalendarSlots(
 ): Record<string, boolean[]> {
   const projectStartMs = Date.parse(project.metadata.project_start);
   if (!Number.isFinite(projectStartMs)) throw new Error("Invalid project start date-time.");
-  const projectOffsetMinutes = parseOffsetMinutes(project.metadata.project_start);
-  const localProjectStartMs = projectStartMs + projectOffsetMinutes * 60_000;
   const shiftsByCalendar = new Map<string, SchedulingProject["calendar_shifts"]>();
 
   for (const shift of project.calendar_shifts) {
@@ -58,16 +74,17 @@ export function buildCalendarSlots(
   }
 
   const output: Record<string, boolean[]> = {};
-  const localFirstDate = Date.UTC(
-    new Date(localProjectStartMs).getUTCFullYear(),
-    new Date(localProjectStartMs).getUTCMonth(),
-    new Date(localProjectStartMs).getUTCDate(),
-  ) - DAY_MS;
-  const localLastDate = localFirstDate + (Math.ceil(horizonH / 24) + 3) * DAY_MS;
-
   for (const calendar of project.calendars) {
+    const formatter = new Intl.DateTimeFormat("en-GB", {
+      timeZone: calendar.timezone, year: "numeric", month: "2-digit", day: "2-digit",
+      hour: "2-digit", minute: "2-digit", hourCycle: "h23",
+    });
     const intervals: Array<[number, number]> = [];
     const shifts = shiftsByCalendar.get(calendar.calendar_id) ?? [];
+    const firstParts = localParts(formatter, projectStartMs);
+    const lastParts = localParts(formatter, projectStartMs + horizonH * HOUR_MS);
+    const localFirstDate = Date.UTC(firstParts[0], firstParts[1] - 1, firstParts[2]) - DAY_MS;
+    const localLastDate = Date.UTC(lastParts[0], lastParts[1] - 1, lastParts[2]) + DAY_MS;
 
     for (let localDateMs = localFirstDate; localDateMs <= localLastDate; localDateMs += DAY_MS) {
       const localDate = new Date(localDateMs);
@@ -80,10 +97,9 @@ export function buildCalendarSlots(
         const startMinutes = parseClock(shift.start_time);
         let endMinutes = parseClock(shift.end_time);
         if (endMinutes <= startMinutes) endMinutes += 24 * 60;
-        const offsetMs = projectOffsetMinutes * 60_000;
         intervals.push([
-          localDateMs + startMinutes * 60_000 - offsetMs,
-          localDateMs + endMinutes * 60_000 - offsetMs,
+          localBoundary(formatter, localDateMs + startMinutes * 60_000, false),
+          localBoundary(formatter, localDateMs + endMinutes * 60_000, true),
         ]);
       }
     }

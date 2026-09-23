@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from collections import defaultdict
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import math
 from typing import Any, Iterable
 
@@ -398,4 +398,4 @@ def validate_schedule(data: dict[str, Any], result: ScheduleResult) -> list[str]
 
 
 def hour_to_datetime(result: ScheduleResult, hour: int) -> datetime:
-    return result.project_start + timedelta(hours=hour)
+    return (result.project_start.astimezone(timezone.utc) + timedelta(hours=hour)).astimezone(result.project_start.tzinfo)
