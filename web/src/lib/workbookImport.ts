@@ -48,7 +48,12 @@ const TABLE_SHEETS: TableSheetDefinition[] = [
   },
 ];
 
-const REQUIRED_SHEETS = ["Metadata", ...TABLE_SHEETS.map((definition) => definition.sheetName)];
+// ResourceSubstitutions is a V1 extension: absent means no configured substitutions.
+const REQUIRED_SHEETS = [
+  "Metadata",
+  ...TABLE_SHEETS.filter((definition) => definition.collection !== "resource_substitutions")
+    .map((definition) => definition.sheetName),
+];
 const KNOWN_INFORMATIONAL_SHEETS = new Set(["DataDictionary"]);
 const BOOLEAN_FIELDS = new Set([
   "enabled",
@@ -444,7 +449,11 @@ export async function importWorkbook(
       if (sheet) data[definition.collection] = readTable(sheet, definition, issues);
     }
 
-    const supportedSheets = new Set([...REQUIRED_SHEETS, ...KNOWN_INFORMATIONAL_SHEETS]);
+    const supportedSheets = new Set([
+      ...TABLE_SHEETS.map((definition) => definition.sheetName),
+      ...REQUIRED_SHEETS,
+      ...KNOWN_INFORMATIONAL_SHEETS,
+    ]);
     for (const sheetName of sheetNames) {
       if (!supportedSheets.has(sheetName)) {
         addIssue(

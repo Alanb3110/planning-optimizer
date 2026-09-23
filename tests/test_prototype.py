@@ -8,6 +8,7 @@ from pathlib import Path
 import unittest
 
 from jsonschema import Draft202012Validator, FormatChecker
+from openpyxl import load_workbook
 
 from planning_optimizer.loader import load_project, validate_project
 from planning_optimizer.reporting import schedule_validation_errors
@@ -22,10 +23,17 @@ EXAMPLE = ROOT / "examples" / "synthetic_project.xlsx"
 
 
 class PrototypeTests(unittest.TestCase):
-    def test_reference_schema_is_valid_json_and_has_no_redundant_objective_gate(self):
+    def test_reference_schema_matches_browser_copy(self):
+        reference = (ROOT / "schema" / "planning_optimizer_schema_v1.json").read_bytes()
+        browser = (ROOT / "web" / "src" / "schema" / "planning_optimizer_schema_v1.json").read_bytes()
+        self.assertEqual(reference, browser, "V1 schema copies diverged; update both together")
+        Draft202012Validator.check_schema(json.loads(reference))
+
+    def test_reference_schema_follows_v1_exchange_contract(self):
         schema = json.loads((ROOT / "schema" / "planning_optimizer_schema_v1.json").read_text(encoding="utf-8"))
-        self.assertNotIn("objective_gate", schema["properties"]["metadata"]["properties"])
-        self.assertEqual(schema["$defs"]["activity"]["properties"]["duration_h"]["exclusiveMinimum"], 0)
+        self.assertIn("objective_gate", schema["properties"]["metadata"]["properties"])
+        self.assertNotIn("resource_substitutions", schema["required"])
+        self.assertEqual(schema["$defs"]["activity"]["properties"]["duration_h"]["minimum"], 0)
         self.assertIn("requires_system_arrival", schema["$defs"]["activity"]["properties"])
 
     def test_synthetic_workbook_loads(self):
@@ -92,6 +100,26 @@ class PrototypeTests(unittest.TestCase):
         )
         report = validate_project(data)
         self.assertTrue(any("priority 1 is duplicated" in error for error in report.errors))
+
+    def test_optional_v1_fields_and_semantic_duration(self):
+        data = deepcopy(synthetic_project())
+        data.pop("resource_substitutions")
+        data["activities"][0].pop("requires_system_arrival")
+        data["milestone_priorities"].append({"gate_id": "SKID_POSITIONED", "enabled": False})
+        self.assertEqual(validate_project(data).errors, [])
+        data["activities"][0]["duration_h"] = 0
+        self.assertTrue(any("duration_h" in error for error in validate_project(data).errors))
+        data["activities"][0]["duration_h"] = 0.5
+        self.assertTrue(any("whole number" in error for error in validate_project(data).errors))
+
+    def test_optional_substitutions_worksheet(self):
+        workbook = load_workbook(EXAMPLE)
+        del workbook["ResourceSubstitutions"]
+        buffer = BytesIO()
+        workbook.save(buffer)
+        project = load_project(buffer)
+        self.assertEqual(project.data["resource_substitutions"], [])
+        self.assertTrue(project.report.ok, project.report.errors)
 
     def test_dashboard_backend_returns_downloadable_results_in_memory(self):
         data = synthetic_project()

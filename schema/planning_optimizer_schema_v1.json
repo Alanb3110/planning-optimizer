@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://example.invalid/planning-optimizer/schema/v1",
-  "title": "Planning Optimizer Project V1",
+  "$id": "https://example.local/ait-planning-optimizer/schema/v1",
+  "title": "AIT Planning Optimizer Project V1",
   "type": "object",
   "required": [
     "metadata",
@@ -16,8 +16,7 @@
     "activity_zones",
     "calendars",
     "calendar_shifts",
-    "milestone_priorities",
-    "resource_substitutions"
+    "milestone_priorities"
   ],
   "properties": {
     "metadata": {
@@ -30,6 +29,7 @@
         "parent_revision": {"type": ["string", "null"]},
         "project_start": {"type": "string", "format": "date-time"},
         "active_calendar": {"type": ["string", "null"]},
+        "objective_gate": {"type": "string"},
         "notes": {"type": "string"}
       },
       "additionalProperties": true
@@ -130,7 +130,7 @@
         "activity_id": {"$ref": "#/$defs/id"},
         "package_id": {"$ref": "#/$defs/id"},
         "name": {"type": "string"},
-        "duration_h": {"type": "number", "exclusiveMinimum": 0},
+        "duration_h": {"type": "number", "minimum": 0},
         "duration_basis": {"enum": ["WORK_TIME", "ELAPSED_TIME"]},
         "preemptible": {"type": "boolean"},
         "calendar_id": {"type": ["string", "null"]},
@@ -266,10 +266,10 @@
     },
     "milestonePriority": {
       "type": "object",
-      "required": ["gate_id", "priority", "enabled"],
+      "required": ["gate_id", "enabled"],
       "properties": {
         "gate_id": {"$ref": "#/$defs/id"},
-        "priority": {"type": "integer", "minimum": 1},
+        "priority": {"type": ["integer", "null"], "minimum": 1},
         "enabled": {"type": "boolean"},
         "notes": {"type": "string"}
       },

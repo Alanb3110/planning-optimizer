@@ -102,6 +102,8 @@ python scripts/check_public_data.py \
 
 See [docs/product_spec_v1.md](docs/product_spec_v1.md) for the functional contract and [schema/planning_optimizer_schema_v1.json](schema/planning_optimizer_schema_v1.json) for the reference data model.
 
+The repository schema is the canonical V1 exchange contract. The web schema is an identical copy checked by the Python tests, and the web validator is generated from it before tests/builds. V1 workbook imports may omit the `ResourceSubstitutions` sheet; disabled milestone priorities may have a blank `priority`. Scheduling still requires positive whole-hour Activity durations and an enabled priority for `PROJECT_COMPLETE`.
+
 ## Python reference
 
 The Python package and Streamlit dashboard are retained for regression comparison. They are not required by the web application. Python-specific installation and CLI commands remain available through `pyproject.toml` and the package help.

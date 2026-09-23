@@ -102,7 +102,9 @@ The loader:
 4. normalizes date-times into the active calendar timezone when the workbook value is naive;
 5. validates required fields, references, types, duplicates, cycles, calendars, capacities, and milestone priorities.
 
-The JSON Schema is the reference exchange model. The runtime performs additional graph and scheduling checks that JSON Schema cannot express.
+The canonical V1 exchange contract is [`schema/planning_optimizer_schema_v1.json`](../schema/planning_optimizer_schema_v1.json), based on the supplied AIT Planning Optimizer schema V1. The browser copy is byte-for-byte identical, enforced by a regression test; the browser's generated AJV validator is compiled from that copy before tests and builds. The Python reference validates against the canonical file. The runtime performs additional graph and scheduling checks that JSON Schema cannot express.
+
+`resource_substitutions` and its workbook sheet `ResourceSubstitutions` are optional; absence means no substitutions. A disabled milestone row may omit `priority` or leave it null, while every enabled milestone needs a distinct positive integer priority. `metadata.objective_gate` is optional and, if supplied, refers to an existing Gate; lexicographic priorities still define the scheduling objective. The exchange schema permits `duration_h = 0` structurally, but V1 scheduling rejects it: Activities require a positive whole number of hours on the 1 h grid. `requires_system_arrival` is optional and defaults to `true` at workbook import; only an explicit `false` enables work before system arrival. The supplied schema omitted its explicit definition while allowing extra Activity fields; both repository copies now declare this established boolean and default from Product Specification v1.1. JSON Schema `default` is descriptive; importers apply it explicitly.
 
 ## 6. Solver
 

@@ -134,6 +134,7 @@
         "duration_basis": {"enum": ["WORK_TIME", "ELAPSED_TIME"]},
         "preemptible": {"type": "boolean"},
         "calendar_id": {"type": ["string", "null"]},
+        "requires_system_arrival": {"type": "boolean", "default": true},
         "enabled": {"type": "boolean"},
         "template_origin": {"type": ["string", "null"]},
         "is_override": {"type": "boolean"},

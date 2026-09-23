@@ -3,6 +3,7 @@ import { resolve } from "node:path";
 import * as XLSX from "xlsx";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { importWorkbook } from "./workbookImport";
+import { validateProject } from "./validation";
 
 const fixturePath = resolve(process.cwd(), "public/synthetic_project.xlsx");
 let syntheticWorkbook: Uint8Array;
@@ -55,6 +56,29 @@ describe("browser workbook import", () => {
     expect(result.data.metadata.project_start).toMatch(/T00:00:00\+00:00$/);
     expect(result.data.calendars[0].weekend_days).toEqual(["SAT", "SUN"]);
     expect(result.data.activities.find((row) => row.activity_id === "ROUTE_SERVICES")?.enabled).toBe(true);
+  });
+
+  it("accepts absent V1 substitutions sheet and a disabled priority without a value", async () => {
+    const workbook = XLSX.read(syntheticWorkbook, { type: "array" });
+    delete workbook.Sheets.ResourceSubstitutions;
+    workbook.SheetNames = workbook.SheetNames.filter((name) => name !== "ResourceSubstitutions");
+    const bytes = XLSX.write(workbook, { type: "array", bookType: "xlsx" });
+    const result = await importWorkbook(bytes, "optional-sheet.xlsx");
+    expect(result.isValid).toBe(true);
+    expect(result.data.resource_substitutions).toEqual([]);
+    result.data.milestone_priorities.push({ gate_id: "SKID_POSITIONED", enabled: false });
+    expect(validateProject(result.data).filter((issue) => issue.severity === "error")).toEqual([]);
+  });
+
+  it("rejects zero and fractional durations and a nonboolean arrival override", async () => {
+    const { data } = await importWorkbook(syntheticWorkbook);
+    data.activities[0].duration_h = 0;
+    expect(validateProject(data).some((issue) => issue.code === "INVALID_DURATION")).toBe(true);
+    data.activities[0].duration_h = 0.5;
+    expect(validateProject(data).some((issue) => issue.code === "INVALID_DURATION")).toBe(true);
+    data.activities[0].duration_h = 1;
+    data.activities[0].requires_system_arrival = "false";
+    expect(validateProject(data).some((issue) => issue.code === "INVALID_ARRIVAL_FLAG")).toBe(true);
   });
 
   it("rejects an incomplete workbook without throwing", async () => {

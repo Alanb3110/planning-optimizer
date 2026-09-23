@@ -8,6 +8,7 @@ from typing import Any, BinaryIO, Iterable
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from openpyxl import load_workbook
+from jsonschema import Draft202012Validator, FormatChecker
 
 from .calendars import build_calendar_slots, contiguous_runs, parse_datetime
 
@@ -27,6 +28,8 @@ TABLE_SHEETS = {
     "CalendarShifts": ("calendar_shifts", "calendar_id"),
     "MilestonePriorities": ("milestone_priorities", "gate_id"),
 }
+OPTIONAL_SHEETS = {"ResourceSubstitutions"}
+SCHEMA_PATH = Path(__file__).resolve().parents[1] / "schema" / "planning_optimizer_schema_v1.json"
 
 BOOL_FIELDS = {
     "enabled",
@@ -211,11 +214,16 @@ def validate_project(data: dict[str, Any], warnings: list[str] | None = None) ->
     required_collections = [
         "metadata", "systems", "packages", "activities", "gates", "dependencies",
         "resources", "activity_resources", "zones", "activity_zones", "calendars",
-        "calendar_shifts", "milestone_priorities", "resource_substitutions",
+        "calendar_shifts", "milestone_priorities",
     ]
     for key in required_collections:
         if key not in data:
             errors.append(f"Missing top-level collection {key!r}.")
+
+    # Structural constraints share the same V1 schema as the browser validator.
+    schema = json.loads(SCHEMA_PATH.read_text(encoding="utf-8"))
+    schema_errors = Draft202012Validator(schema, format_checker=FormatChecker()).iter_errors(data)
+    errors.extend(f"JSON Schema {error.json_path}: {error.message}" for error in schema_errors)
 
     metadata = data.get("metadata", {})
     _check_required(metadata, ["project_id", "revision_id", "project_start"], "metadata", errors)
@@ -237,6 +245,8 @@ def validate_project(data: dict[str, Any], warnings: list[str] | None = None) ->
     resources = {r.get("resource_id"): r for r in data.get("resources", [])}
     zones = {r.get("zone_id"): r for r in data.get("zones", [])}
     calendars = {r.get("calendar_id"): r for r in data.get("calendars", [])}
+    if metadata.get("objective_gate") and metadata["objective_gate"] not in gates:
+        errors.append(f"metadata: unknown objective_gate {metadata['objective_gate']!r}.")
     for system_id, row in systems.items():
         _check_required(row, ["system_id", "name", "family", "arrival_date", "enabled"], f"system {system_id}", errors)
         if row.get("installation_zone") and row["installation_zone"] not in zones:
@@ -260,13 +270,14 @@ def validate_project(data: dict[str, Any], warnings: list[str] | None = None) ->
             errors.append(f"activity {activity_id}: unknown package {row.get('package_id')!r}.")
         if row.get("duration_basis") not in {"WORK_TIME", "ELAPSED_TIME"}:
             errors.append(f"activity {activity_id}: invalid duration_basis {row.get('duration_basis')!r}.")
-        if not isinstance(row.get("duration_h"), (int, float)) or row.get("duration_h", 0) <= 0:
-            errors.append(f"activity {activity_id}: duration_h must be positive.")
+        duration = row.get("duration_h")
+        if isinstance(duration, bool) or not isinstance(duration, (int, float)) or duration <= 0 or int(duration) != duration:
+            errors.append(f"activity {activity_id}: duration_h must be a positive whole number of hours.")
         if not isinstance(row.get("preemptible"), bool):
             errors.append(f"activity {activity_id}: preemptible must be boolean.")
         if not isinstance(row.get("enabled"), bool):
             errors.append(f"activity {activity_id}: enabled must be boolean.")
-        if not isinstance(row.get("requires_system_arrival"), bool):
+        if not isinstance(row.get("requires_system_arrival", True), bool):
             errors.append(f"activity {activity_id}: requires_system_arrival must be boolean.")
         if row.get("duration_basis") == "ELAPSED_TIME" and row.get("preemptible"):
             errors.append(f"activity {activity_id}: ELAPSED_TIME cannot be preemptible in V1.")
@@ -351,6 +362,11 @@ def validate_project(data: dict[str, Any], warnings: list[str] | None = None) ->
         elif pair[1] in resources and not resources[pair[1]].get("unlimited") and quantity > resources[pair[1]].get("capacity", 0):
             errors.append(f"activity_resources {pair}: demand {quantity} exceeds capacity {resources[pair[1]].get('capacity')}.")
 
+    for row in data.get("resource_substitutions", []):
+        for field in ("required_resource_id", "substitute_resource_id"):
+            if row.get(field) not in resources:
+                errors.append(f"resource_substitutions: unknown {field} {row.get(field)!r}.")
+
     seen_pairs.clear()
     for row in data.get("activity_zones", []):
         pair = (row.get("activity_id"), row.get("zone_id"))
@@ -427,8 +443,8 @@ def validate_project(data: dict[str, Any], warnings: list[str] | None = None) ->
         seen_priority_gates.add(gate_id)
         if gate_id not in gates:
             errors.append(f"milestone_priorities: unknown gate {gate_id!r}.")
-        if not isinstance(priority, int) or isinstance(priority, bool) or priority < 1:
-            errors.append(f"milestone_priorities {gate_id!r}: priority must be a positive integer.")
+        if row.get("enabled") and (not isinstance(priority, int) or isinstance(priority, bool) or priority < 1):
+            errors.append(f"milestone_priorities {gate_id!r}: enabled priority must be a positive integer.")
         elif row.get("enabled"):
             if priority in seen_priorities:
                 errors.append(f"milestone_priorities: enabled priority {priority} is duplicated.")
@@ -449,7 +465,7 @@ def load_project(source: str | Path | BinaryIO, strict: bool = True) -> ProjectD
     else:
         workbook_source = Path(source)
     workbook = load_workbook(workbook_source, read_only=True, data_only=False)
-    missing_sheets = [name for name in ["Metadata", *TABLE_SHEETS] if name not in workbook.sheetnames]
+    missing_sheets = [name for name in ["Metadata", *TABLE_SHEETS] if name not in workbook.sheetnames and name not in OPTIONAL_SHEETS]
     if missing_sheets:
         report = ValidationReport(errors=[f"Missing worksheets: {missing_sheets}."], warnings=[])
         if strict:
@@ -458,7 +474,7 @@ def load_project(source: str | Path | BinaryIO, strict: bool = True) -> ProjectD
 
     data: dict[str, Any] = {"metadata": _read_metadata(workbook["Metadata"], warnings)}
     for sheet_name, (key, key_header) in TABLE_SHEETS.items():
-        data[key] = _read_table(workbook[sheet_name], key_header, warnings)
+        data[key] = _read_table(workbook[sheet_name], key_header, warnings) if sheet_name in workbook.sheetnames else []
     _normalize_data(data, warnings, errors)
     report = validate_project(data, warnings)
     report.errors[:0] = errors

@@ -218,6 +218,12 @@ export function validateProject(data: NormalizedProject): ValidationIssue[] {
     const activityId = asString(row.activity_id) ?? "?";
     checkReference(row.package_id, packageIds, "package", `activities.${activityId}.package_id`, issues);
     checkReference(row.calendar_id, calendarIds, "calendar", `activities.${activityId}.calendar_id`, issues);
+    if (typeof row.duration_h !== "number" || !Number.isInteger(row.duration_h) || row.duration_h <= 0) {
+      issues.push(issue("INVALID_DURATION", `Activity '${activityId}' requires a positive whole-hour duration.`, `activities.${activityId}.duration_h`));
+    }
+    if (row.requires_system_arrival !== undefined && typeof row.requires_system_arrival !== "boolean") {
+      issues.push(issue("INVALID_ARRIVAL_FLAG", `Activity '${activityId}' requires a boolean requires_system_arrival.`, `activities.${activityId}.requires_system_arrival`));
+    }
   }
   for (const row of data.gates) {
     const gateId = asString(row.gate_id) ?? "?";
