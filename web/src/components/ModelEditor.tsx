@@ -1,13 +1,15 @@
 import { useState } from "react";
 import type { NormalizedProject, NormalizedRecord } from "../lib/model";
+import { EntityEditor } from "./EntityEditor";
 
 type NodeType = "ACTIVITY" | "GATE";
 type Draft = { dependency_id: string; source_type: NodeType; source_id: string; target_type: NodeType; target_id: string; lag_h: string; rationale: string; enabled: boolean };
 const empty: Draft = { dependency_id: "", source_type: "ACTIVITY", source_id: "", target_type: "GATE", target_id: "", lag_h: "0", rationale: "", enabled: true };
 
-export function ModelEditor({ project, focus, onChange, onExport, canExport, disabled = false }: {
+export function ModelEditor({ project, focus, onChange, onSelect, onExport, canExport, disabled = false }: {
   project: NormalizedProject; onChange: (project: NormalizedProject) => void;
   focus: { kind: "SYSTEM" | "PACKAGE" | "ACTIVITY" | "GATE"; id: string } | null;
+  onSelect: (selection: { kind: "SYSTEM" | "PACKAGE" | "ACTIVITY" | "GATE"; id: string }) => void;
   onExport: (comment: string) => Promise<string>; canExport: boolean; disabled?: boolean;
 }) {
   const [editing, setEditing] = useState<string | null>(null);
@@ -94,6 +96,7 @@ export function ModelEditor({ project, focus, onChange, onExport, canExport, dis
   </div>;
 
   return <div className="model-editor" aria-label="Model editing">
+    <EntityEditor project={project} focus={focus} onChange={onChange} onSelect={onSelect} disabled={disabled} />
     {(focus?.kind === "ACTIVITY" || focus?.kind === "GATE") && <>
     <h4>Dependencies for {focus.id}</h4>
     {linked.length ? <ul className="model-dependencies">{linked.map(({ row, index }) => <li key={index}>

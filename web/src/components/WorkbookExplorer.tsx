@@ -13,7 +13,7 @@ const keyOf = (kind: Kind, id: string) => `${kind}:${id}`;
 
 export function WorkbookExplorer({ project, renderEditor }: {
   project: SchedulingProject;
-  renderEditor?: (selected: { kind: Kind; id: string } | null) => ReactNode;
+  renderEditor?: (selected: { kind: Kind; id: string } | null, onSelect: (selection: { kind: Kind; id: string }) => void) => ReactNode;
 }) {
   const searchId = useId();
   const [query, setQuery] = useState("");
@@ -53,6 +53,7 @@ export function WorkbookExplorer({ project, renderEditor }: {
       })
       : [];
   const select = (entity: Entity) => setSelection(keyOf(entity.kind, entity.id));
+  const selectById = (next: { kind: Kind; id: string }) => setSelection(keyOf(next.kind, next.id));
   const entry = (kind: Kind, id: string) => {
     const entity = entities.get(keyOf(kind, id))!;
     return (
@@ -134,9 +135,9 @@ export function WorkbookExplorer({ project, renderEditor }: {
             {relationList("in")}{relationList("out")}
             <p className="workbook-caveat">Follow a linked element to inspect the next step. Inactive links are shown for review and do not constrain the schedule. This view does not calculate a critical path.</p>
           </>}
-          {renderEditor?.({ kind: selected.kind, id: selected.id })}
+          {renderEditor?.({ kind: selected.kind, id: selected.id }, selectById)}
         </> : <><p>Select an element to see its direct links. Search for a gate such as LOX_DRY_RELEASED, then follow its predecessors.</p>
-          {renderEditor?.(null)}</>}
+          {renderEditor?.(null, selectById)}</>}
       </div>
     </div>
   </section>;

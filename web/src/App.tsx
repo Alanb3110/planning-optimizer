@@ -147,7 +147,8 @@ function App() {
     editGenerationRef.current += 1;
     resetSchedule();
     const issues = [...result.issues.filter((issue) => issue.severity === "warning"), ...validateProject(data)];
-    setResult({ ...result, data, issues, isValid: !issues.some((issue) => issue.severity === "error") });
+    setResult({ ...result, data, issues, summary: { systems: data.systems.length, packages: data.packages.length,
+      activities: data.activities.length, gates: data.gates.length }, isValid: !issues.some((issue) => issue.severity === "error") });
   };
 
   const downloadRevision = async (comment: string) => {
@@ -315,8 +316,8 @@ function App() {
       )}
 
       {project && <WorkbookExplorer key={importGenerationRef.current} project={project}
-        renderEditor={(selection) => <ModelEditor key={selection ? `${selection.kind}:${selection.id}` : "none"}
-          project={result!.data} focus={selection} onChange={updateModel}
+        renderEditor={(selection, onSelect) => <ModelEditor key={selection ? `${selection.kind}:${selection.id}` : "none"}
+          project={result!.data} focus={selection} onChange={updateModel} onSelect={onSelect}
           onExport={downloadRevision} canExport={result!.isValid} disabled={isSolving} />} />}
 
       <section className="output-panel" aria-label="Schedule output">

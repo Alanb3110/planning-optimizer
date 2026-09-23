@@ -67,6 +67,55 @@ const schedule: ScheduleResult = {
 describe("AIT Planning Optimizer workspace", () => {
   beforeEach(() => vi.clearAllMocks());
 
+  it("adds a fictional activity, edits its V1 timing fields and links it to an existing gate", async () => {
+    const actual = await vi.importActual<typeof import("./lib/workbookImport")>("./lib/workbookImport");
+    vi.mocked(importWorkbook).mockResolvedValue(await actual.importWorkbook(
+      new Uint8Array(await readFile(resolve(process.cwd(), "public/synthetic_project.xlsx")))));
+    render(<App />);
+    selectWorkbook("synthetic_project.xlsx");
+    await screen.findByText("Workbook accepted");
+    fireEvent.click(screen.getByRole("button", { name: "Add activity" }));
+    const form = screen.getByLabelText("New activity form");
+    fireEvent.change(within(form).getByLabelText("activity ID"), { target: { value: "LOX_FICTIONAL_CHECK" } });
+    fireEvent.change(within(form).getByLabelText("Name"), { target: { value: "Fictional LOX check" } });
+    fireEvent.change(within(form).getByLabelText("Package"), { target: { value: "SKID_INSTALLATION" } });
+    fireEvent.change(within(form).getByLabelText("Nominal duration (h)"), { target: { value: "3" } });
+    fireEvent.change(within(form).getByLabelText("Duration basis"), { target: { value: "ELAPSED_TIME" } });
+    fireEvent.click(within(form).getByLabelText("Interruptible"));
+    fireEvent.change(within(form).getByLabelText("Activity calendar"), { target: { value: "DEMO_CALENDAR" } });
+    fireEvent.click(within(form).getByRole("button", { name: "Add activity" }));
+    expect(screen.getByRole("button", { name: "Edit activity LOX_FICTIONAL_CHECK" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Calculate schedule" })).toBeEnabled();
+    fireEvent.click(screen.getByRole("button", { name: "Add successor" }));
+    fireEvent.change(screen.getByLabelText("Dependency ID"), { target: { value: "DEP_LOX_FICTIONAL" } });
+    fireEvent.change(screen.getByLabelText("Successor ID"), { target: { value: "PROJECT_COMPLETE" } });
+    fireEvent.change(screen.getByLabelText("Justification"), { target: { value: "Fictional check completed" } });
+    fireEvent.click(screen.getByRole("button", { name: "Add dependency" }));
+    expect(screen.getByText("DEP_LOX_FICTIONAL", { selector: ".model-dependencies code" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Download new .xlsx revision" })).toBeEnabled();
+  });
+
+  it("duplicates a package and lets the user edit its new ID's descriptive fields", async () => {
+    const actual = await vi.importActual<typeof import("./lib/workbookImport")>("./lib/workbookImport");
+    vi.mocked(importWorkbook).mockResolvedValue(await actual.importWorkbook(
+      new Uint8Array(await readFile(resolve(process.cwd(), "public/synthetic_project.xlsx")))));
+    render(<App />);
+    selectWorkbook("synthetic_project.xlsx");
+    await screen.findByText("Workbook accepted");
+    const tree = screen.getByLabelText("Systems, packages, activities and gates");
+    fireEvent.click(within(tree).getByRole("button", { name: /SKID_ACCEPTANCE/ }));
+    fireEvent.click(screen.getByRole("button", { name: "Duplicate package SKID_ACCEPTANCE" }));
+    expect(screen.getByRole("button", { name: "Edit package SKID_ACCEPTANCE_COPY" })).toBeInTheDocument();
+    expect(within(tree).getByRole("button", { name: /ACCEPT_SKID_COPY/ })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Edit package SKID_ACCEPTANCE_COPY" }));
+    const form = screen.getByLabelText("Edit package form");
+    expect(within(form).getByLabelText("package ID")).toBeDisabled();
+    fireEvent.change(within(form).getByLabelText("Name"), { target: { value: "Fictional GN2 checks" } });
+    fireEvent.click(within(form).getByRole("button", { name: "Save package" }));
+    expect(within(tree).getByRole("button", { name: /Fictional GN2 checks/ })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Download new .xlsx revision" })).toBeEnabled();
+  });
+
   it("blocks solving and revision export after a fictional cycle, then allows removal and reprioritization", async () => {
     const actual = await vi.importActual<typeof import("./lib/workbookImport")>("./lib/workbookImport");
     const bytes = new Uint8Array(await readFile(resolve(process.cwd(), "public/synthetic_project.xlsx")));
