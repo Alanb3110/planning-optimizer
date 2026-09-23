@@ -19,6 +19,7 @@ function sheetContents(sheet: XLSX.WorkSheet): string {
 }
 
 function updateTable(sheet: XLSX.WorkSheet, key: string, rows: Record<string, unknown>[], originalRows: Record<string, unknown>[]) {
+  const cellValue = (value: unknown) => Array.isArray(value) ? value.join(",") : value;
   const cells = XLSX.utils.sheet_to_json<unknown[]>(sheet, { header: 1, raw: true, defval: null });
   const headerIndex = cells.slice(0, 30).findIndex((row) => row.some((value) => value === key));
   if (headerIndex < 0) throw new Error(`Missing ${key} header in source workbook.`);
@@ -37,13 +38,13 @@ function updateTable(sheet: XLSX.WorkSheet, key: string, rows: Record<string, un
         for (const [field, column] of allHeaders.map((field, column) => [field, column] as const)) {
           if (canonical(originalRows[index][field]) === canonical(rows[index][field])) continue;
           const address = XLSX.utils.encode_cell({ r: dataRows[index].index, c: column });
-          const value = rows[index][field];
+          const value = cellValue(rows[index][field]);
           if (value === undefined || value === null) delete sheet[address];
           else XLSX.utils.sheet_add_aoa(sheet, [[value as string | number | boolean]], { origin: address });
         }
       }
       XLSX.utils.sheet_add_aoa(sheet, rows.slice(originalRows.length).map((row) => allHeaders.map((field) =>
-        (row[field] ?? null) as string | number | boolean | null)), {
+        (cellValue(row[field]) ?? null) as string | number | boolean | null)), {
         origin: { r: (dataRows.at(-1)?.index ?? headerIndex) + 1, c: 0 },
       });
       return;
@@ -56,7 +57,7 @@ function updateTable(sheet: XLSX.WorkSheet, key: string, rows: Record<string, un
   }
   XLSX.utils.sheet_add_aoa(sheet, [allHeaders], { origin: { r: headerIndex, c: 0 } });
   XLSX.utils.sheet_add_aoa(sheet, rows.map((row) => allHeaders.map((field) => {
-    const value = row[field];
+    const value = cellValue(row[field]);
     return value === undefined || value === null ? null : value as string | number | boolean;
   })), { origin: { r: headerIndex + 1, c: 0 } });
 }
@@ -96,8 +97,12 @@ export async function createWorkbookRevision(source: Source, project: Normalized
     ["Systems", "systems", "system_id"], ["Packages", "packages", "package_id"],
     ["Activities", "activities", "activity_id"], ["Gates", "gates", "gate_id"],
     ["Dependencies", "dependencies", "dependency_id"],
+    ["Resources", "resources", "resource_id"],
     ["ActivityResources", "activity_resources", "activity_id"],
+    ["Zones", "zones", "zone_id"],
     ["ActivityZones", "activity_zones", "activity_id"],
+    ["Calendars", "calendars", "calendar_id"],
+    ["CalendarShifts", "calendar_shifts", "calendar_id"],
     ["MilestonePriorities", "milestone_priorities", "gate_id"],
   ];
   const changedSheets = new Set(["Metadata"]);

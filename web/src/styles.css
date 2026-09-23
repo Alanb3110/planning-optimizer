@@ -508,6 +508,17 @@ td > strong { color: #183641; }
 @media (max-width: 700px) { .workbook-layout { grid-template-columns: 1fr; } .workbook-tree { max-height: 320px; } }
 .model-editor { border-top: 1px solid #d6dcda; padding-top: 0.8rem; margin-top: 1rem; color: #23414a; }
 .entity-editor { border-bottom: 1px solid #d6dcda; padding-bottom: 0.8rem; }
+.constraint-editor { border-bottom: 1px solid #d6dcda; padding: 0.8rem 0; }
+.constraint-editor > label { display: inline-flex; flex-direction: column; gap: 0.2rem; margin: 0.3rem 0.6rem 0.6rem 0; font-size: 0.75rem; }
+.constraint-editor select { min-width: 12rem; padding: 0.4rem; border: 1px solid #a9bdbb; background: #fff; color: #23414a; }
+.constraint-rows { max-height: 18rem; overflow: auto; margin-bottom: 0.55rem; }
+.constraint-row { display: flex; gap: 0.4rem; align-items: center; padding: 0.35rem 0; border-bottom: 1px solid #d6dcda; font-size: 0.75rem; }
+.constraint-row span { flex: 1; overflow-wrap: anywhere; }
+.constraint-weekends { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 0.7rem; border: 1px solid #a9bdbb; }
+.constraint-weekends label { display: inline-flex; align-items: center; width: auto; }
+.constraint-weekends input { width: auto; }
+.constraint-preview { grid-column: 1 / -1; display: grid; gap: 0.3rem; font-size: 0.75rem; padding: 0.6rem; border: 1px solid #a7cfc2; }
+.constraint-preview ul { margin: 0.2rem 0; padding-left: 1.2rem; }
 .model-editor h3 { font-size: 1rem; margin: 1rem 0 0.4rem; }
 .model-editor h4 { margin: 0.7rem 0 0.4rem; font-size: 0.78rem; }
 .model-editor p, .model-dependencies { font-size: 0.78rem; line-height: 1.5; }
@@ -532,7 +543,8 @@ td > strong { color: #183641; }
 .model-export { border-top: 1px solid #dbe3e0; margin-top: 0.9rem; padding-top: 0.4rem; }
 .revision-comment { margin: 1rem 0 0.3rem; }
 :root[data-theme="dark"] .model-editor, :root[data-theme="dark"] .model-fields, :root[data-theme="dark"] .model-export,
-:root[data-theme="dark"] .entity-editor { color: #edf3f1; border-color: var(--dark-border); }
+:root[data-theme="dark"] .entity-editor, :root[data-theme="dark"] .constraint-editor, :root[data-theme="dark"] .constraint-row,
+:root[data-theme="dark"] .constraint-weekends, :root[data-theme="dark"] .constraint-preview { color: #edf3f1; border-color: var(--dark-border); }
 :root[data-theme="dark"] .model-editor input, :root[data-theme="dark"] .model-editor select { border-color: #63777b; color: #edf3f1; background: var(--dark-input); }
 :root[data-theme="dark"] .model-editor input:disabled { color: #bcc9c5; background: #282d2f; }
 :root[data-theme="dark"] .model-dependencies li, :root[data-theme="dark"] .model-priority { border-color: var(--dark-border); }

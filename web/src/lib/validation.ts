@@ -251,6 +251,12 @@ export function validateProject(data: NormalizedProject): ValidationIssue[] {
   for (const row of data.calendar_shifts) {
     checkReference(row.calendar_id, calendarIds, "calendar", "calendar_shifts.calendar_id", issues);
   }
+  const shiftKeys = new Set<string>();
+  for (const row of data.calendar_shifts) {
+    const key = `${row.calendar_id}|${row.weekday}|${row.shift_name}|${row.start_time}|${row.end_time}`;
+    if (shiftKeys.has(key)) issues.push(issue("DUPLICATE_SHIFT", `Duplicate shift '${row.shift_name}' for ${row.calendar_id} on ${row.weekday}.`, "calendar_shifts"));
+    shiftKeys.add(key);
+  }
   for (const row of data.activity_resources) {
     checkReference(row.activity_id, activityIds, "activity", "activity_resources.activity_id", issues);
     checkReference(row.resource_id, resourceIds, "resource", "activity_resources.resource_id", issues);
@@ -274,6 +280,7 @@ export function validateProject(data: NormalizedProject): ValidationIssue[] {
   for (const row of data.activity_zones) {
     checkReference(row.activity_id, activityIds, "activity", "activity_zones.activity_id", issues);
     checkReference(row.zone_id, zoneIds, "zone", "activity_zones.zone_id", issues);
+    if (row.load === "ALL" && row.exclusive !== true) issues.push(issue("ALL_REQUIRES_EXCLUSIVE", `Activity '${row.activity_id}' uses ALL load in zone '${row.zone_id}' without exclusivity.`, "activity_zones"));
   }
   for (const row of data.milestone_priorities) {
     checkReference(row.gate_id, gateIds, "gate", "milestone_priorities.gate_id", issues);

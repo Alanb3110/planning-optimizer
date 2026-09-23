@@ -49,6 +49,7 @@ function App() {
   const editGenerationRef = useRef(0);
   const sourceRef = useRef<Blob | ArrayBuffer | null>(null);
   const [editable, setEditable] = useState(false);
+  const [modelEdited, setModelEdited] = useState(false);
 
   const resetSchedule = () => {
     solveAbortRef.current?.abort();
@@ -75,6 +76,7 @@ function App() {
     resetSchedule();
     sourceRef.current = null;
     setEditable(false);
+    setModelEdited(false);
     setResult(null);
     setIsLoading(true);
     setLoadError(null);
@@ -130,6 +132,7 @@ function App() {
     resetSchedule();
     sourceRef.current = null;
     setEditable(false);
+    setModelEdited(false);
     setResult(null);
     setLoadError(null);
     setIsLoading(false);
@@ -145,6 +148,7 @@ function App() {
   const updateModel = (data: NormalizedProject) => {
     if (!result) return;
     editGenerationRef.current += 1;
+    setModelEdited(true);
     resetSchedule();
     const issues = [...result.issues.filter((issue) => issue.severity === "warning"), ...validateProject(data)];
     setResult({ ...result, data, issues, summary: { systems: data.systems.length, packages: data.packages.length,
@@ -301,7 +305,7 @@ function App() {
 
       {result && (
         <section className="validation-strip" aria-label="Workbook validation summary">
-          <div className={`validation-state ${result.isValid ? "valid" : "invalid"}`}><span aria-hidden="true">{result.isValid ? "✓" : "!"}</span><div><strong>{result.isValid ? "Workbook accepted" : "Workbook rejected"}</strong><small>{errors.length} errors · {warnings.length} warnings</small></div></div>
+          <div className={`validation-state ${result.isValid ? "valid" : "invalid"}`}><span aria-hidden="true">{result.isValid ? "✓" : "!"}</span><div><strong>{modelEdited ? (result.isValid ? "Edited model valid" : "Edited model invalid") : (result.isValid ? "Workbook accepted" : "Workbook rejected")}</strong><small>{errors.length} errors · {warnings.length} warnings{modelEdited ? " · previous schedule cleared; recalculate to see planning effects" : ""}</small></div></div>
           <div className="model-counts" aria-label="Workbook entity counts">
             {Object.entries(result.summary).map(([label, value]) => <div key={label}><strong>{value}</strong><span>{label}</span></div>)}
           </div>
