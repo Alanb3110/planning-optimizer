@@ -12,7 +12,7 @@ test("fictional lag edit downloads a reimportable revision with unchanged System
   await page.getByRole("button", { name: "Edit DEP_003" }).click();
   await page.getByLabel("Lag (h)").fill("3");
   await page.getByRole("button", { name: "Save dependency" }).click();
-  await expect(page.getByLabel("Workbook validation summary")).toContainText("Workbook accepted");
+  await expect(page.getByLabel("Workbook validation summary")).toContainText("Edited model valid");
   const downloadPromise = page.waitForEvent("download");
   await page.getByRole("button", { name: "Download new .xlsx revision" }).click();
   const download = await downloadPromise;
