@@ -63,6 +63,12 @@ The Gantt and SVG group packages by `display_order` within each system (package 
 
 The source workbook is never modified. The downloaded ZIP is a user-controlled copy outside application memory; **Clear local data** cannot delete files already downloaded by the browser.
 
+## Editing the V1 model locally
+
+After importing a valid workbook, **Edit FS dependencies** lets you add, edit, deactivate or remove a link. Supply its ID, Activity/Gate endpoints, non-negative whole-hour lag and justification. **Gate priorities** lets you enable ranks and assign distinct positive integers. Each change runs the existing V1 validator; errors such as duplicate IDs, unknown references, enabled cycles, duplicate ranks or a missing `PROJECT_COMPLETE` rank disable calculation and both downloads until resolved. Edits reset any previous result.
+
+**Download new .xlsx revision** writes a separate file using the original workbook held in memory. It updates only the `Metadata`, `Dependencies` and `MilestonePriorities` worksheets; `revision_id` receives a timestamp suffix, `parent_revision` refers to the imported revision, `revision_timestamp` is UTC ISO 8601, and an optional `revision_comment` can be supplied. The app reimports the output and checks edited and non-edited normalized records, other worksheet values and formulas before offering the download. It does not overwrite the imported file. Excel features outside the V1 table model, such as embedded objects and advanced workbook features, are not covered by the preservation check; review such workbooks in Excel before using the revision.
+
 ## Inspecting calculated dates
 
 Select an Activity in the inspection view or click its name in the results table. The view uses the existing hourly result and workbook: it reports each enabled predecessor's finish (or Gate time) plus its elapsed lag, any required System arrival, and the first eligible execution profile under the Activity, Resource and Zone calendars after those release bounds. For `ELAPSED_TIME`, calendars do not restrict execution. A binding predecessor or arrival equals the recorded start; equality alone does not establish that it caused a delay.

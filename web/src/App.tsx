@@ -1,12 +1,16 @@
 import { type ChangeEvent, useEffect, useId, useRef, useState } from "react";
 import { ScheduleResults } from "./components/ScheduleResults";
 import { WorkbookExplorer } from "./components/WorkbookExplorer";
+import { ModelEditor } from "./components/ModelEditor";
 import type { RunSettings } from "./lib/exports";
 import { fetchLocalArrayBuffer } from "./lib/localAsset";
 import type { ValidationIssue, WorkbookImportResult } from "./lib/model";
 import { solveScheduleInWorker } from "./lib/scheduler/solverClient";
 import { asSchedulingProject, type ScheduleResult, type SolveProgress } from "./lib/scheduler/types";
 import { importWorkbook } from "./lib/workbookImport";
+import { createWorkbookRevision } from "./lib/workbookRevision";
+import { validateProject } from "./lib/validation";
+import type { NormalizedProject } from "./lib/model";
 
 const EXAMPLE_NAME = "synthetic_project.xlsx";
 
@@ -42,6 +46,9 @@ function App() {
   const [theme, setTheme] = useState<"light" | "dark">("dark");
   const solveAbortRef = useRef<AbortController | null>(null);
   const importGenerationRef = useRef(0);
+  const editGenerationRef = useRef(0);
+  const sourceRef = useRef<Blob | ArrayBuffer | null>(null);
+  const [editable, setEditable] = useState(false);
 
   const resetSchedule = () => {
     solveAbortRef.current?.abort();
@@ -66,6 +73,8 @@ function App() {
   const beginImport = () => {
     const generation = ++importGenerationRef.current;
     resetSchedule();
+    sourceRef.current = null;
+    setEditable(false);
     setResult(null);
     setIsLoading(true);
     setLoadError(null);
@@ -76,7 +85,11 @@ function App() {
     const generation = beginImport();
     try {
       const imported = await importWorkbook(source, fileName);
-      if (generation === importGenerationRef.current) setResult(imported);
+      if (generation === importGenerationRef.current) {
+        sourceRef.current = source;
+        setEditable(imported.isValid);
+        setResult(imported);
+      }
     } catch (error) {
       if (generation === importGenerationRef.current) {
         setLoadError(error instanceof Error ? error.message : "The workbook could not be processed.");
@@ -98,7 +111,11 @@ function App() {
       const workbook = await fetchLocalArrayBuffer(`${import.meta.env.BASE_URL}${EXAMPLE_NAME}`);
       if (generation !== importGenerationRef.current) return;
       const imported = await importWorkbook(workbook, EXAMPLE_NAME);
-      if (generation === importGenerationRef.current) setResult(imported);
+      if (generation === importGenerationRef.current) {
+        sourceRef.current = workbook;
+        setEditable(imported.isValid);
+        setResult(imported);
+      }
     } catch (error) {
       if (generation === importGenerationRef.current) {
         setLoadError(error instanceof Error ? error.message : "The synthetic example could not be loaded.");
@@ -111,6 +128,8 @@ function App() {
   const clearLocalData = () => {
     importGenerationRef.current += 1;
     resetSchedule();
+    sourceRef.current = null;
+    setEditable(false);
     setResult(null);
     setLoadError(null);
     setIsLoading(false);
@@ -122,6 +141,29 @@ function App() {
   const horizonValid = Number.isInteger(horizonValue) && horizonValue >= 0;
   const timeLimitValid = Number.isFinite(timeLimitValue) && timeLimitValue > 0;
   const settingsValid = horizonValid && timeLimitValid;
+
+  const updateModel = (data: NormalizedProject) => {
+    if (!result) return;
+    editGenerationRef.current += 1;
+    resetSchedule();
+    const issues = [...result.issues.filter((issue) => issue.severity === "warning"), ...validateProject(data)];
+    setResult({ ...result, data, issues, isValid: !issues.some((issue) => issue.severity === "error") });
+  };
+
+  const downloadRevision = async (comment: string) => {
+    if (!result?.isValid || !sourceRef.current) throw new Error("Resolve model errors before exporting.");
+    const generation = importGenerationRef.current;
+    const editGeneration = editGenerationRef.current;
+    const { bytes, fileName } = await createWorkbookRevision(sourceRef.current, result.data, comment);
+    if (generation !== importGenerationRef.current || editGeneration !== editGenerationRef.current) {
+      throw new Error("Model changed during export; try again.");
+    }
+    const url = URL.createObjectURL(new Blob([bytes], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }));
+    const anchor = document.createElement("a");
+    anchor.href = url; anchor.download = fileName; anchor.click();
+    setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    return fileName;
+  };
 
   const calculateSchedule = async () => {
     if (!result?.isValid || isSolving || !settingsValid) return;
@@ -164,7 +206,7 @@ function App() {
 
   const errors = result?.issues.filter((issue) => issue.severity === "error") ?? [];
   const warnings = result?.issues.filter((issue) => issue.severity === "warning") ?? [];
-  const project = result?.isValid ? asSchedulingProject(result.data) : null;
+  const project = result && editable ? asSchedulingProject(result.data) : null;
   const currentErrorKind = solveError ? errorKind(solveError) : null;
 
   return (
@@ -272,7 +314,11 @@ function App() {
         </section>
       )}
 
-      {project && <WorkbookExplorer key={importGenerationRef.current} project={project} />}
+      {project && <>
+        <WorkbookExplorer key={importGenerationRef.current} project={project} />
+        <ModelEditor key={`edit-${importGenerationRef.current}`} project={result!.data} onChange={updateModel}
+          onExport={downloadRevision} canExport={result!.isValid} disabled={isSolving} />
+      </>}
 
       <section className="output-panel" aria-label="Schedule output">
         {!result && !loadError && !isLoading && (
@@ -290,7 +336,7 @@ function App() {
         {result?.isValid && solveError && (
           <div className={`terminal-state ${currentErrorKind}`} role="alert"><span className="state-icon" aria-hidden="true">{currentErrorKind === "infeasible" ? "∅" : "!"}</span><div><span className="state-code">{currentErrorKind === "infeasible" ? "NO FEASIBLE SCHEDULE" : "SOLVER ERROR"}</span><h2>{currentErrorKind === "infeasible" ? "The model is infeasible within these settings" : "The schedule could not be calculated"}</h2><p>{solveError}</p><button className="secondary-button retry-button" type="button" onClick={calculateSchedule}>Try again</button></div></div>
         )}
-        {project && schedule && result && lastRunSettings && (
+        {project && schedule && result?.isValid && lastRunSettings && (
           <ScheduleResults
             project={project}
             result={schedule}

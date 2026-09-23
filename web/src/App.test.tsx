@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import App, { errorKind } from "./App";
 import type { WorkbookImportResult } from "./lib/model";
@@ -6,6 +6,8 @@ import { fetchLocalArrayBuffer } from "./lib/localAsset";
 import { solveScheduleInWorker } from "./lib/scheduler/solverClient";
 import type { ScheduleResult } from "./lib/scheduler/types";
 import { importWorkbook } from "./lib/workbookImport";
+import { readFile } from "node:fs/promises";
+import { resolve } from "node:path";
 
 vi.mock("./lib/workbookImport", () => ({ importWorkbook: vi.fn() }));
 vi.mock("./lib/localAsset", () => ({ fetchLocalArrayBuffer: vi.fn() }));
@@ -64,6 +66,35 @@ const schedule: ScheduleResult = {
 
 describe("AIT Planning Optimizer workspace", () => {
   beforeEach(() => vi.clearAllMocks());
+
+  it("blocks solving and revision export after a fictional cycle, then allows removal and reprioritization", async () => {
+    const actual = await vi.importActual<typeof import("./lib/workbookImport")>("./lib/workbookImport");
+    const bytes = new Uint8Array(await readFile(resolve(process.cwd(), "public/synthetic_project.xlsx")));
+    vi.mocked(importWorkbook).mockResolvedValue(await actual.importWorkbook(bytes));
+    render(<App />);
+    selectWorkbook("synthetic_project.xlsx");
+    await screen.findByText("Workbook accepted");
+    fireEvent.change(screen.getByLabelText("Dependency ID"), { target: { value: "DEP_CYCLE" } });
+    fireEvent.change(screen.getByLabelText("Predecessor type"), { target: { value: "GATE" } });
+    fireEvent.change(screen.getByLabelText("Predecessor ID"), { target: { value: "PROJECT_COMPLETE" } });
+    fireEvent.change(screen.getByLabelText("Successor type"), { target: { value: "ACTIVITY" } });
+    fireEvent.change(screen.getByLabelText("Successor ID"), { target: { value: "PREPARE_FOUNDATION" } });
+    fireEvent.change(screen.getByLabelText("Justification"), { target: { value: "Fictional cycle for validation" } });
+    fireEvent.click(screen.getByRole("button", { name: "Add dependency" }));
+    expect(screen.getByText(/DEPENDENCY_CYCLE/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Calculate schedule" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Download new .xlsx revision" })).toBeDisabled();
+    const addedRow = screen.getByText("DEP_CYCLE", { selector: ".model-dependencies code" }).closest("li")!;
+    fireEvent.click(within(addedRow).getByRole("button", { name: "Remove" }));
+    expect(screen.getByRole("button", { name: "Calculate schedule" })).toBeEnabled();
+    const rank = screen.getByText("PROJECT_COMPLETE", { selector: ".model-priority code" })
+      .closest(".model-priority")!.querySelector("input[type=number]")!;
+    fireEvent.change(rank, { target: { value: "" } });
+    expect(screen.getByText(/INVALID_MILESTONE_PRIORITY/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Download new .xlsx revision" })).toBeDisabled();
+    fireEvent.change(rank, { target: { value: "1" } });
+    expect(screen.getByRole("button", { name: "Download new .xlsx revision" })).toBeEnabled();
+  });
 
   it("shows the local workflow, solver settings, and an empty result state", () => {
     render(<App />);
