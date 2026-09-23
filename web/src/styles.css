@@ -249,10 +249,12 @@ h3 { margin: 0; color: #18323d; font-size: 1.05rem; letter-spacing: -0.02em; }
 .gantt-scroll, .table-scroll { max-width: 100%; overflow-x: auto; overscroll-behavior-inline: contain; }
 .gantt-scroll { max-height: 620px; overflow-y: auto; }
 .gantt { display: grid; grid-template-columns: 260px var(--chart-width); width: max-content; min-width: 100%; color: #2b444e; font-size: 0.68rem; }
-.gantt-axis-label, .gantt-axis { position: sticky; top: 0; z-index: 5; height: 34px; border-bottom: 1px solid #ccd6d3; background: #eef3f1; }
+.gantt-axis-label, .gantt-axis { position: sticky; top: 0; z-index: 5; height: 46px; border-bottom: 1px solid #ccd6d3; background: #eef3f1; }
 .gantt-axis-label { left: 0; display: flex; align-items: center; padding: 0 0.75rem; color: #64777d; font-weight: 750; }
 .gantt-axis { position: sticky; }
-.gantt-axis span { position: absolute; bottom: 8px; color: #5d7278; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 0.6rem; transform: translateX(4px); }
+.gantt-axis span { position: absolute; bottom: 5px; display: grid; gap: 1px; white-space: nowrap; color: #5d7278; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 0.6rem; transform: translateX(4px); }
+.gantt-axis span strong { font-weight: 700; }
+.gantt-axis span small { font-size: inherit; }
 .gantt-entry, .gantt-row { display: contents; }
 .gantt-system, .gantt-package { grid-column: 1 / -1; display: flex; min-height: 32px; }
 .gantt-group-label { position: sticky; left: 0; z-index: 4; display: flex; flex: 0 0 auto; gap: 0.6rem; align-items: baseline; max-width: min(580px, calc(100vw - 2rem)); padding: 0.5rem 0.75rem; }

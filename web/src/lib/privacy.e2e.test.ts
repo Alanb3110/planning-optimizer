@@ -104,8 +104,23 @@ describe("private browser-only example workflow", () => {
         "validation_report.json",
       ]);
       expect(files.get("schedule.csv")).toContain("ROUTE_SERVICES");
+      expect(files.get("schedule.csv")!.split("\r\n")[0]).toMatch(/segments_h,start_datetime_local,end_datetime_local$/);
+      expect(files.get("schedule.csv")).toContain("32-40;56-58");
       expect(files.get("gates.csv")).toContain("PROJECT_COMPLETE");
+      expect(files.get("gates.csv")!.split("\r\n")[0]).toMatch(/datetime,datetime_local$/);
       expect(files.get("gantt_activities.svg")).toContain("<svg");
+      const reorderedProject = {
+        ...project,
+        packages: project.packages.map((item) => ({
+          ...item, display_order: item.package_id === "SKID_INSTALLATION" ? 0 : item.display_order,
+        })),
+      };
+      const reorderedSvg = createScheduleBundle({
+        project: reorderedProject, result, validation: imported,
+        settings: { horizonDays: 0, timeLimitS: 30 }, solveDurationMs: 1000,
+      }).entries.find((entry) => entry.name === "gantt_activities.svg")!.data.toString();
+      expect(reorderedSvg.indexOf("EQUIPMENT_SKID / SKID_INSTALLATION / POSITION_SKID"))
+        .toBeLessThan(reorderedSvg.indexOf("EQUIPMENT_SKID / SKID_ACCEPTANCE / ACCEPT_SKID"));
       expect(JSON.parse(files.get("run_summary.json")!).completion_h).toBe(132);
       expect(JSON.parse(files.get("validation_report.json")!).valid).toBe(true);
       const diagnosticBundle = createScheduleBundle({

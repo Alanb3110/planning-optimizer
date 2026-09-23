@@ -28,6 +28,12 @@ test("fictitious workbook imports and solves locally in the production build", a
   await page.getByRole("button", { name: "Calculate schedule" }).click();
   await expect(page.getByLabel("Schedule summary")).toContainText("Optimal", { timeout: 220_000 });
   await expect(page.getByLabel("Schedule summary")).toContainText("PROJECT_COMPLETE");
+  await expect(page.getByLabel("Scrollable activity Gantt")).toContainText("Jan 2030");
+  await expect(page.getByLabel("Scrollable activity Gantt")).toContainText("H+0");
+  await expect(page.getByLabel("Local result export")).toContainText("UTC (Z) and");
+  const downloadPromise = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Download result ZIP" }).click();
+  expect((await downloadPromise).suggestedFilename()).toMatch(/_schedule\.zip$/);
 
   expect(workers, "a real scheduling Worker must start").toHaveLength(1);
   expect(new URL(workers[0]).origin).toBe(origin);

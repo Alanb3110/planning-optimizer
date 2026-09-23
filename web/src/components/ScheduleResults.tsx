@@ -1,5 +1,6 @@
 import { useState, type CSSProperties } from "react";
 import { downloadScheduleBundle, type RunSettings } from "../lib/exports";
+import { calendarTicks, resultTimezone, sortedActivities } from "../lib/schedulePresentation";
 import type { WorkbookImportResult } from "../lib/model";
 import type {
   ScheduleResult,
@@ -82,7 +83,7 @@ function executionLabel(scheduled: ScheduledActivity): string {
 function buildRows(project: SchedulingProject, result: ScheduleResult): ActivityRow[] {
   const packages = Object.fromEntries(project.packages.map((item) => [item.package_id, item]));
   const systems = Object.fromEntries(project.systems.map((item) => [item.system_id, item]));
-  return Object.values(result.activities)
+  return sortedActivities(project, Object.values(result.activities))
     .map((scheduled) => {
       const activity = project.activities.find((item) => item.activity_id === scheduled.activityId);
       if (!activity) return null;
@@ -91,16 +92,10 @@ function buildRows(project: SchedulingProject, result: ScheduleResult): Activity
       if (!packageItem || !system) return null;
       return { activity, scheduled, package: packageItem, system };
     })
-    .filter((row): row is ActivityRow => row !== null)
-    .sort((left, right) =>
-      left.system.system_id.localeCompare(right.system.system_id) ||
-      left.package.package_id.localeCompare(right.package.package_id) ||
-      left.scheduled.startH - right.scheduled.startH ||
-      left.activity.activity_id.localeCompare(right.activity.activity_id),
-    );
+    .filter((row): row is ActivityRow => row !== null);
 }
 
-function GanttChart({ rows, result }: { rows: ActivityRow[]; result: ScheduleResult }) {
+function GanttChart({ rows, result, timezone }: { rows: ActivityRow[]; result: ScheduleResult; timezone: string }) {
   const chartEnd = Math.max(
     24,
     result.objectiveH,
@@ -108,8 +103,7 @@ function GanttChart({ rows, result }: { rows: ActivityRow[]; result: ScheduleRes
     ...Object.values(result.gates),
   );
   const roundedEnd = Math.ceil(chartEnd / 24) * 24;
-  const tickStep = roundedEnd <= 168 ? 24 : roundedEnd <= 336 ? 48 : 96;
-  const ticks = Array.from({ length: Math.floor(roundedEnd / tickStep) + 1 }, (_, index) => index * tickStep);
+  const ticks = calendarTicks(result.projectStart, roundedEnd, timezone);
   const systemIndex = new Map<string, number>();
   rows.forEach(({ system }) => {
     if (!systemIndex.has(system.system_id)) systemIndex.set(system.system_id, systemIndex.size);
@@ -130,9 +124,11 @@ function GanttChart({ rows, result }: { rows: ActivityRow[]; result: ScheduleRes
       <div className="gantt-scroll" tabIndex={0} aria-label="Scrollable activity Gantt">
         <div className="gantt" style={{ "--chart-width": `${Math.max(720, roundedEnd * 5)}px` } as CSSProperties}>
           <div className="gantt-axis-label">System / package / activity</div>
-          <div className="gantt-axis" aria-hidden="true">
+          <div className="gantt-axis" aria-label={`Calendar dates in ${timezone}; H+ is elapsed hours from project start`}>
             {ticks.map((tick) => (
-              <span key={tick} style={{ left: `${(tick / roundedEnd) * 100}%` }}>H+{tick}</span>
+              <span key={tick.offsetH} style={{ left: `${(tick.offsetH / roundedEnd) * 100}%` }}>
+                <strong>{tick.dateLabel}</strong><small>{tick.offsetLabel}</small>
+              </span>
             ))}
           </div>
           {rows.map(({ activity, scheduled, package: packageItem, system }, index) => {
@@ -167,7 +163,7 @@ function GanttChart({ rows, result }: { rows: ActivityRow[]; result: ScheduleRes
                   </div>
                   <div className="gantt-track" style={{ "--system-color": color } as CSSProperties}>
                     {ticks.map((tick) => (
-                      <i className="gantt-gridline" key={tick} style={{ left: `${(tick / roundedEnd) * 100}%` }} />
+                      <i className="gantt-gridline" key={tick.offsetH} style={{ left: `${(tick.offsetH / roundedEnd) * 100}%` }} />
                     ))}
                     {scheduled.segments.map(([start, end]) => (
                       <span
@@ -191,10 +187,7 @@ function GanttChart({ rows, result }: { rows: ActivityRow[]; result: ScheduleRes
 export function ScheduleResults({ project, result, validation, settings, solveDurationMs }: ScheduleResultsProps) {
   const [downloadedFile, setDownloadedFile] = useState<string | null>(null);
   const rows = buildRows(project, result);
-  const activeCalendar = project.calendars.find(
-    (calendar) => calendar.calendar_id === project.metadata.active_calendar,
-  );
-  const timezone = activeCalendar?.timezone ?? project.calendars[0]?.timezone;
+  const timezone = resultTimezone(project);
   const packageById = Object.fromEntries(project.packages.map((item) => [item.package_id, item]));
   const systemById = Object.fromEntries(project.systems.map((item) => [item.system_id, item]));
   const gateRows = Object.entries(result.gates)
@@ -220,7 +213,7 @@ export function ScheduleResults({ project, result, validation, settings, solveDu
         <div>
           <span className="section-kicker">Local export</span>
           <strong>Download the complete result bundle</strong>
-          <small>ZIP generated in this browser. No project data is uploaded.</small>
+          <small>ZIP generated in this browser. Dates: UTC (Z) and {timezone} local. No project data is uploaded.</small>
         </div>
         <div>
           <button className="export-button" type="button" onClick={downloadBundle}>Download result ZIP</button>
@@ -250,7 +243,7 @@ export function ScheduleResults({ project, result, validation, settings, solveDu
         </div>
       </section>
 
-      <GanttChart rows={rows} result={result} />
+      <GanttChart rows={rows} result={result} timezone={timezone} />
 
       <section className="result-section" aria-labelledby="activities-title">
         <div className="section-heading">

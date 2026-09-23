@@ -58,6 +58,8 @@ After a successful solve, **Download result ZIP** creates a ZIP entirely in the 
 - `run_summary.json`;
 - `gantt_activities.svg`.
 
+The Gantt and SVG group packages by `display_order` within each system (package ID breaks ties). Their calendar ticks use the active project calendar's IANA timezone, shown on the result page and SVG; `H+` remains elapsed hours since project start. CSV columns `start_datetime`, `end_datetime` and `datetime`, and JSON `completion_datetime`, retain their existing UTC `Z` values. New **trailing** CSV columns `start_datetime_local` and `end_datetime_local` in `schedule.csv`, and `datetime_local` in `gates.csv`, contain the same instants in the display timezone as ISO 8601 strings with numeric offsets (including daylight saving changes). `run_summary.json` adds `display_timezone` (IANA name) and `completion_datetime_local`; existing names, order and values are preserved. `segments_h` keeps the original semicolon-separated elapsed-hour intervals; `normalized_project.json` contains the active calendar and its timezone.
+
 The source workbook is never modified. The downloaded ZIP is a user-controlled copy outside application memory; **Clear local data** cannot delete files already downloaded by the browser.
 
 ## Privacy and data lifecycle
