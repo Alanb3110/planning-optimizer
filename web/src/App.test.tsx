@@ -1,13 +1,32 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import App, { errorKind } from "./App";
 import type { WorkbookImportResult } from "./lib/model";
+import { fetchLocalArrayBuffer } from "./lib/localAsset";
 import { solveScheduleInWorker } from "./lib/scheduler/solverClient";
 import type { ScheduleResult } from "./lib/scheduler/types";
 import { importWorkbook } from "./lib/workbookImport";
 
 vi.mock("./lib/workbookImport", () => ({ importWorkbook: vi.fn() }));
+vi.mock("./lib/localAsset", () => ({ fetchLocalArrayBuffer: vi.fn() }));
 vi.mock("./lib/scheduler/solverClient", () => ({ solveScheduleInWorker: vi.fn() }));
+
+function deferred<T>() {
+  let resolve!: (value: T) => void;
+  let reject!: (reason: Error) => void;
+  const promise = new Promise<T>((accept, fail) => { resolve = accept; reject = fail; });
+  return { promise, resolve, reject };
+}
+
+function selectWorkbook(name: string) {
+  fireEvent.change(screen.getByLabelText("Select a local .xlsx file"), {
+    target: { files: [new File(["fictional"], name)] },
+  });
+}
+
+function namedWorkbook(name: string): WorkbookImportResult {
+  return { ...importedWorkbook, fileName: name };
+}
 
 const importedWorkbook: WorkbookImportResult = {
   fileName: "synthetic_project.xlsx",
@@ -152,6 +171,92 @@ describe("AIT Planning Optimizer workspace", () => {
     fireEvent.click(screen.getByRole("button", { name: "Calculate schedule" }));
     expect(await screen.findByText(/no feasible schedule/i)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Try again" })).toBeInTheDocument();
+  });
+
+  it("discards both a late import result and a late import error after clear", async () => {
+    const first = deferred<WorkbookImportResult>();
+    const second = deferred<WorkbookImportResult>();
+    vi.mocked(importWorkbook).mockReturnValueOnce(first.promise).mockReturnValueOnce(second.promise);
+    render(<App />);
+
+    selectWorkbook("fictional-first.xlsx");
+    fireEvent.click(screen.getByRole("button", { name: "Clear local data" }));
+    await act(async () => first.resolve(namedWorkbook("fictional-first.xlsx")));
+    expect(screen.getByText("No workbook loaded")).toBeInTheDocument();
+    expect(screen.queryByText("fictional-first.xlsx")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Calculate schedule" })).toBeDisabled();
+
+    selectWorkbook("fictional-second.xlsx");
+    fireEvent.click(screen.getByRole("button", { name: "Clear local data" }));
+    await act(async () => second.reject(new Error("Fictional import failed")));
+    expect(screen.getByText("No workbook loaded")).toBeInTheDocument();
+    expect(screen.queryByText("Fictional import failed")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Clear local data" })).toBeDisabled();
+  });
+
+  it("keeps the latest workbook when an earlier import completes afterwards", async () => {
+    const first = deferred<WorkbookImportResult>();
+    const second = deferred<WorkbookImportResult>();
+    vi.mocked(importWorkbook).mockReturnValueOnce(first.promise).mockReturnValueOnce(second.promise);
+    render(<App />);
+
+    selectWorkbook("fictional-first.xlsx");
+    selectWorkbook("fictional-second.xlsx");
+    await act(async () => second.resolve(namedWorkbook("fictional-second.xlsx")));
+    expect(screen.getByText("fictional-second.xlsx")).toBeInTheDocument();
+    await act(async () => first.resolve(namedWorkbook("fictional-first.xlsx")));
+    expect(screen.getByText("fictional-second.xlsx")).toBeInTheDocument();
+    expect(screen.queryByText("fictional-first.xlsx")).not.toBeInTheDocument();
+  });
+
+  it("keeps loading the replacement when the earlier import finishes first", async () => {
+    const first = deferred<WorkbookImportResult>();
+    const second = deferred<WorkbookImportResult>();
+    vi.mocked(importWorkbook).mockReturnValueOnce(first.promise).mockReturnValueOnce(second.promise);
+    render(<App />);
+
+    selectWorkbook("fictional-first.xlsx");
+    selectWorkbook("fictional-second.xlsx");
+    await act(async () => first.reject(new Error("Outdated fictional import failed")));
+    expect(screen.getByText("Validating workbook")).toBeInTheDocument();
+    expect(screen.queryByText("Outdated fictional import failed")).not.toBeInTheDocument();
+    await act(async () => second.resolve(namedWorkbook("fictional-second.xlsx")));
+    expect(screen.getByText("fictional-second.xlsx")).toBeInTheDocument();
+  });
+
+  it("discards a late example fetch after clear and after a replacement workbook", async () => {
+    const firstFetch = deferred<ArrayBuffer>();
+    const secondFetch = deferred<ArrayBuffer>();
+    vi.mocked(fetchLocalArrayBuffer).mockReturnValueOnce(firstFetch.promise).mockReturnValueOnce(secondFetch.promise);
+    vi.mocked(importWorkbook).mockResolvedValue(namedWorkbook("fictional-replacement.xlsx"));
+    render(<App />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Load synthetic example" }));
+    fireEvent.click(screen.getByRole("button", { name: "Clear local data" }));
+    await act(async () => firstFetch.resolve(new ArrayBuffer(1)));
+    expect(importWorkbook).not.toHaveBeenCalled();
+    expect(screen.getByText("No workbook loaded")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Load synthetic example" }));
+    selectWorkbook("fictional-replacement.xlsx");
+    expect(await screen.findByText("fictional-replacement.xlsx")).toBeInTheDocument();
+    await act(async () => secondFetch.resolve(new ArrayBuffer(1)));
+    expect(screen.getByText("fictional-replacement.xlsx")).toBeInTheDocument();
+    expect(importWorkbook).toHaveBeenCalledTimes(1);
+  });
+
+  it("discards a late example import after clear", async () => {
+    const pendingImport = deferred<WorkbookImportResult>();
+    vi.mocked(fetchLocalArrayBuffer).mockResolvedValue(new ArrayBuffer(1));
+    vi.mocked(importWorkbook).mockReturnValue(pendingImport.promise);
+    render(<App />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Load synthetic example" }));
+    await waitFor(() => expect(importWorkbook).toHaveBeenCalledTimes(1));
+    fireEvent.click(screen.getByRole("button", { name: "Clear local data" }));
+    await act(async () => pendingImport.resolve(namedWorkbook("synthetic_project.xlsx")));
+    expect(screen.getByText("No workbook loaded")).toBeInTheDocument();
+    expect(screen.queryByText("synthetic_project.xlsx")).not.toBeInTheDocument();
   });
 });
 

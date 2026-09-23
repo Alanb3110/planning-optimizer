@@ -40,6 +40,7 @@ function App() {
   const [timeLimitS, setTimeLimitS] = useState("120");
   const [theme, setTheme] = useState<"light" | "dark">("dark");
   const solveAbortRef = useRef<AbortController | null>(null);
+  const importGenerationRef = useRef(0);
 
   const resetSchedule = () => {
     solveAbortRef.current?.abort();
@@ -52,23 +53,35 @@ function App() {
     setLastRunSettings(null);
   };
 
-  useEffect(() => () => solveAbortRef.current?.abort(), []);
+  useEffect(() => () => {
+    importGenerationRef.current += 1;
+    solveAbortRef.current?.abort();
+  }, []);
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
     return () => { delete document.documentElement.dataset.theme; };
   }, [theme]);
 
-  const processWorkbook = async (source: Blob | ArrayBuffer, fileName: string) => {
+  const beginImport = () => {
+    const generation = ++importGenerationRef.current;
     resetSchedule();
+    setResult(null);
     setIsLoading(true);
     setLoadError(null);
+    return generation;
+  };
+
+  const processWorkbook = async (source: Blob | ArrayBuffer, fileName: string) => {
+    const generation = beginImport();
     try {
-      setResult(await importWorkbook(source, fileName));
+      const imported = await importWorkbook(source, fileName);
+      if (generation === importGenerationRef.current) setResult(imported);
     } catch (error) {
-      setResult(null);
-      setLoadError(error instanceof Error ? error.message : "The workbook could not be processed.");
+      if (generation === importGenerationRef.current) {
+        setLoadError(error instanceof Error ? error.message : "The workbook could not be processed.");
+      }
     } finally {
-      setIsLoading(false);
+      if (generation === importGenerationRef.current) setIsLoading(false);
     }
   };
 
@@ -78,22 +91,24 @@ function App() {
   };
 
   const loadExample = async () => {
-    resetSchedule();
+    const generation = beginImport();
     if (fileInputRef.current) fileInputRef.current.value = "";
-    setIsLoading(true);
-    setLoadError(null);
     try {
       const workbook = await fetchLocalArrayBuffer(`${import.meta.env.BASE_URL}${EXAMPLE_NAME}`);
-      setResult(await importWorkbook(workbook, EXAMPLE_NAME));
+      if (generation !== importGenerationRef.current) return;
+      const imported = await importWorkbook(workbook, EXAMPLE_NAME);
+      if (generation === importGenerationRef.current) setResult(imported);
     } catch (error) {
-      setResult(null);
-      setLoadError(error instanceof Error ? error.message : "The synthetic example could not be loaded.");
+      if (generation === importGenerationRef.current) {
+        setLoadError(error instanceof Error ? error.message : "The synthetic example could not be loaded.");
+      }
     } finally {
-      setIsLoading(false);
+      if (generation === importGenerationRef.current) setIsLoading(false);
     }
   };
 
   const clearLocalData = () => {
+    importGenerationRef.current += 1;
     resetSchedule();
     setResult(null);
     setLoadError(null);
@@ -183,16 +198,16 @@ function App() {
             aria-label="Select a local .xlsx file"
             accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
             onChange={handleFileSelection}
-            disabled={isLoading || isSolving}
+            disabled={isSolving}
           />
           <div className="import-actions">
-            <label className={`file-picker${isLoading || isSolving ? " disabled" : ""}`} htmlFor={inputId}>
+            <label className={`file-picker${isSolving ? " disabled" : ""}`} htmlFor={inputId}>
               <span className="upload-icon" aria-hidden="true">↑</span>
               <span><strong>Select local workbook</strong><small>Read in this browser session</small></span>
               <span className="browse-label">Browse</span>
             </label>
             <span className="or-label" aria-hidden="true">OR</span>
-            <button className="secondary-button" type="button" onClick={loadExample} disabled={isLoading || isSolving}>
+            <button className="secondary-button" type="button" onClick={loadExample} disabled={isSolving}>
               Load synthetic example
             </button>
           </div>
