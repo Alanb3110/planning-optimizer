@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { ScheduleResults } from "../components/ScheduleResults";
 import { createScheduleBundle } from "./exports";
 import { calendarTicks, localIso } from "./schedulePresentation";
@@ -43,6 +43,10 @@ describe("result presentation", () => {
     expect(screen.getByTitle("A_JOB: H+5 to H+6")).toBeInTheDocument();
     expect(screen.getByTitle("A_JOB: H+29 to H+30")).toBeInTheDocument();
     expect(within(gantt).getByText("10 Jan 2027")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Why this Activity starts at H+6" })).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText("Activity", { exact: true }), { target: { value: "A_JOB" } });
+    expect(screen.getByRole("heading", { name: "Why this Activity starts at H+5" })).toBeInTheDocument();
+    expect(screen.getByText(/No critical path or causal delay is calculated/)).toBeInTheDocument();
 
     const entries = createScheduleBundle({ project, result, validation, settings: { horizonDays: 0, timeLimitS: 30 }, solveDurationMs: 1000, generatedAt: new Date("2027-01-01T00:00:00Z") }).entries;
     const get = (name: string): string => {

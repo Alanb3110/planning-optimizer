@@ -18,6 +18,7 @@ Implemented capabilities include:
 - zero-duration Gates and lexicographic milestone priorities;
 - local HiGHS WebAssembly optimization in a Worker;
 - Activity Gantt, Activity table and Gate table;
+- an Activity date-inspection view with incoming FS lags, system arrival, applicable calendars, recorded capacity occupancy and reachable downstream Gates;
 - local ZIP result export.
 
 ## Run locally
@@ -61,6 +62,12 @@ After a successful solve, **Download result ZIP** creates a ZIP entirely in the 
 The Gantt and SVG group packages by `display_order` within each system (package ID breaks ties). Their calendar ticks use the active project calendar's IANA timezone, shown on the result page and SVG; `H+` remains elapsed hours since project start. CSV columns `start_datetime`, `end_datetime` and `datetime`, and JSON `completion_datetime`, retain their existing UTC `Z` values. New **trailing** CSV columns `start_datetime_local` and `end_datetime_local` in `schedule.csv`, and `datetime_local` in `gates.csv`, contain the same instants in the display timezone as ISO 8601 strings with numeric offsets (including daylight saving changes). `run_summary.json` adds `display_timezone` (IANA name) and `completion_datetime_local`; existing names, order and values are preserved. `segments_h` keeps the original semicolon-separated elapsed-hour intervals; `normalized_project.json` contains the active calendar and its timezone.
 
 The source workbook is never modified. The downloaded ZIP is a user-controlled copy outside application memory; **Clear local data** cannot delete files already downloaded by the browser.
+
+## Inspecting calculated dates
+
+Select an Activity in the inspection view or click its name in the results table. The view uses the existing hourly result and workbook: it reports each enabled predecessor's finish (or Gate time) plus its elapsed lag, any required System arrival, and the first eligible execution profile under the Activity, Resource and Zone calendars after those release bounds. For `ELAPSED_TIME`, calendars do not restrict execution. A binding predecessor or arrival equals the recorded start; equality alone does not establish that it caused a delay.
+
+For earlier calendar-eligible profiles, the view checks Resource and Zone capacities with **all other scheduled Activities held fixed**. A recorded occupancy conflict rules out that particular placement under that condition; an earlier profile that fits means the inspected constraints do not explain the chosen start. The reachable Gate list marks direct binding dependencies separately from indirect paths. Neither the view nor the ZIP computes a critical path or proves that rescheduling one Activity would move a Gate. This inspection is presentation-only and does not change the solver, results or export format.
 
 ## Privacy and data lifecycle
 

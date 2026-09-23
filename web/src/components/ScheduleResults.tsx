@@ -1,6 +1,7 @@
-import { useState, type CSSProperties } from "react";
+import { useMemo, useState, type CSSProperties } from "react";
 import { downloadScheduleBundle, type RunSettings } from "../lib/exports";
 import { calendarTicks, resultTimezone, sortedActivities } from "../lib/schedulePresentation";
+import { explainActivity } from "../lib/scheduleExplanation";
 import type { WorkbookImportResult } from "../lib/model";
 import type {
   ScheduleResult,
@@ -186,7 +187,10 @@ function GanttChart({ rows, result, timezone }: { rows: ActivityRow[]; result: S
 
 export function ScheduleResults({ project, result, validation, settings, solveDurationMs }: ScheduleResultsProps) {
   const [downloadedFile, setDownloadedFile] = useState<string | null>(null);
+  const [selectedActivityId, setSelectedActivityId] = useState<string | null>(null);
   const rows = buildRows(project, result);
+  const selectedId = rows.some((row) => row.activity.activity_id === selectedActivityId) ? selectedActivityId : rows[0]?.activity.activity_id;
+  const explanation = useMemo(() => selectedId ? explainActivity(project, result, selectedId) : null, [project, result, selectedId]);
   const timezone = resultTimezone(project);
   const packageById = Object.fromEntries(project.packages.map((item) => [item.package_id, item]));
   const systemById = Object.fromEntries(project.systems.map((item) => [item.system_id, item]));
@@ -245,6 +249,39 @@ export function ScheduleResults({ project, result, validation, settings, solveDu
 
       <GanttChart rows={rows} result={result} timezone={timezone} />
 
+      {explanation && (
+        <section className="result-section explanation" aria-labelledby="explanation-title">
+          <div className="section-heading">
+            <div><span className="section-kicker">Date inspection</span><h3 id="explanation-title">Why this Activity starts at H+{explanation.startH}</h3></div>
+            <label htmlFor="explain-activity">Activity <select id="explain-activity" value={selectedId ?? ""} onChange={(event) => setSelectedActivityId(event.target.value)}>
+              {rows.map((row) => <option key={row.activity.activity_id} value={row.activity.activity_id}>{displayName(row.activity, row.activity.activity_id)} ({row.activity.activity_id})</option>)}
+            </select></label>
+          </div>
+          <div className="explanation-content">
+            <p><strong>{selectedId}</strong> · {projectDate(result.projectStart, explanation.startH, timezone)} · H+ offsets are elapsed hours.</p>
+            <h4>Required release · H+{explanation.releaseH}</h4>
+            <ul>
+              {explanation.predecessors.map((row) => <li key={row.id}>Dependency <code>{row.id}</code>: {row.sourceType === "ACTIVITY" ? "finish" : "time"} of {row.sourceType} <code>{row.sourceId}</code> H+{row.sourceH} + {row.lagH} h elapsed lag = H+{row.requiredH}. {row.binding ? "Binding at this start." : "Satisfied before this start."}</li>)}
+              {explanation.arrival && <li>System arrival <code>{explanation.arrival.id}</code> requires H+{explanation.arrival.requiredH}. {explanation.arrival.binding ? "Binding at this start." : "Satisfied before this start."}</li>}
+              {!explanation.predecessors.length && !explanation.arrival && <li>Project start H+0; no arrival requirement or incoming dependency.</li>}
+            </ul>
+            <h4>Calendar and capacity</h4>
+            <p>{explanation.calendarIds.length ? `Calendars: ${explanation.calendarIds.join(", ")}. ` : "No calendar assigned. "}
+              {explanation.calendarEarliestH === null ? "No eligible execution profile found from the release to the recorded start."
+                : `First calendar-eligible start after release: H+${explanation.calendarEarliestH}. ${explanation.calendarLimited ? "Calendar availability rules out earlier starts after release." : "Calendars do not postpone the first start after release."}`}
+            </p>
+            {explanation.earlierProfiles > 0 && <p>{explanation.earlierProfiles} earlier calendar-eligible start(s) examined with the other scheduled activities held fixed. {explanation.earlierProfileFitsFixedSchedule
+              ? "At least one fits the recorded capacity usage; these checks alone do not explain the chosen start."
+              : "Every examined earlier profile exceeds at least one recorded Resource or Zone capacity. This is conditional on the other scheduled activities staying in place."}</p>}
+            {explanation.occupancy.length > 0 && <ul>{explanation.occupancy.map((row) => <li key={`${row.kind}:${row.id}`}>{row.kind} <code>{row.id}</code>: at H+{row.slotH}, {row.occupants.join(", ")} use {row.used} / {row.capacity}; this Activity needs {row.demand}. Earlier placement here would exceed capacity.</li>)}</ul>}
+            {explanation.earlierProfiles === 0 && <p>No calendar-eligible start exists between the release and the recorded start.</p>}
+            <h4>Downstream Gates</h4>
+            {explanation.downstreamGates.length ? <ul>{explanation.downstreamGates.map((gate) => <li key={gate.gateId}><code>{gate.gateId}</code> · H+{gate.atH} · {gate.direct ? (gate.binding ? "Direct dependency binding at the recorded Gate time." : "Direct dependency satisfied before the recorded Gate time.") : "Reachable through other nodes; timing effect not established."}</li>)}</ul> : <p>No reachable scheduled Gate through enabled dependencies.</p>}
+            <p className="explanation-caveat">Binding means equality in this result, not proof that moving this Activity alone would change a Gate. Capacity conflicts hold only with the other Activities fixed. No critical path or causal delay is calculated.</p>
+          </div>
+        </section>
+      )}
+
       <section className="result-section" aria-labelledby="activities-title">
         <div className="section-heading">
           <div><span className="section-kicker">Detailed output</span><h3 id="activities-title">Activities</h3></div>
@@ -258,7 +295,7 @@ export function ScheduleResults({ project, result, validation, settings, solveDu
                 <tr key={activity.activity_id}>
                   <td><span className="entity system-entity">SYS</span>{displayName(system, system.system_id)}<code>{system.system_id}</code></td>
                   <td><span className="entity package-entity">PKG</span>{displayName(packageItem, packageItem.package_id)}<code>{packageItem.package_id}</code></td>
-                  <td><strong>{displayName(activity, activity.activity_id)}</strong><code>{activity.activity_id}</code></td>
+                  <td><button className="activity-inspect" type="button" onClick={() => setSelectedActivityId(activity.activity_id)} aria-label={`Inspect ${activity.activity_id}`}>{displayName(activity, activity.activity_id)}</button><code>{activity.activity_id}</code></td>
                   <td><strong>H+{scheduled.startH}</strong><small>{compactDate(result.projectStart, scheduled.startH, timezone)}</small></td>
                   <td><strong>H+{scheduled.endH}</strong><small>{compactDate(result.projectStart, scheduled.endH, timezone)}</small></td>
                   <td>{activity.duration_h} h</td>
