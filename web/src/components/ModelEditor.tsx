@@ -3,6 +3,8 @@ import type { NormalizedProject, NormalizedRecord } from "../lib/model";
 import { duplicateActivity } from "../lib/modelEdits";
 import { EntityEditor } from "./EntityEditor";
 import { ConstraintEditor } from "./ConstraintEditor";
+import { DependencyNeighborhood } from "./DependencyNeighborhood";
+import { validateProject } from "../lib/validation";
 
 type NodeType = "ACTIVITY" | "GATE";
 type Draft = { dependency_id: string; source_type: NodeType; source_id: string; target_type: NodeType; target_id: string; lag_h: string; rationale: string; enabled: boolean };
@@ -37,10 +39,12 @@ export function ModelEditor({ project, focus, onChange, onSelect, onExport, canE
     setFormError("");
     setFormOpen(true);
   };
-  const begin = (side: "source" | "target") => {
+  const begin = (side: "source" | "target", other?: { kind: NodeType; id: string }) => {
     if (!focus || (focus.kind !== "ACTIVITY" && focus.kind !== "GATE")) return;
     setEditing(null);
-    setDraft({ ...empty, [`${side}_type`]: focus.kind, [`${side}_id`]: focus.id });
+    const opposite = side === "source" ? "target" : "source";
+    setDraft({ ...empty, [`${side}_type`]: focus.kind, [`${side}_id`]: focus.id,
+      ...(other ? { [`${opposite}_type`]: other.kind, [`${opposite}_id`]: other.id } : {}) });
     setFormError("");
     setFormOpen(true);
   };
@@ -54,9 +58,15 @@ export function ModelEditor({ project, focus, onChange, onSelect, onExport, canE
     const row: NormalizedRecord = { dependency_id: draft.dependency_id, source_type: draft.source_type,
       source_id: draft.source_id, target_type: draft.target_type, target_id: draft.target_id,
       relation: "FS", lag_h: lag, enabled: draft.enabled, rationale: draft.rationale.trim() };
-    onChange({ ...project, dependencies: editing === null
+    const next = { ...project, dependencies: editing === null
       ? [...project.dependencies, row]
-      : project.dependencies.map((item) => item.dependency_id === editing ? { ...item, ...row } : item) });
+      : project.dependencies.map((item) => item.dependency_id === editing ? { ...item, ...row } : item) };
+    const hadCycle = validateProject(project).some((issue) => issue.code === "DEPENDENCY_CYCLE");
+    if (!hadCycle && validateProject(next).some((issue) => issue.code === "DEPENDENCY_CYCLE")) {
+      setFormError("This active FS link creates a dependency cycle. Choose another direction or deactivate it.");
+      return;
+    }
+    onChange(next);
     setEditing(null); setDraft(empty); setFormOpen(false);
   };
   const changePriority = (gateId: string, field: "enabled" | "priority" | "notes", value: unknown) => {
@@ -160,6 +170,11 @@ export function ModelEditor({ project, focus, onChange, onSelect, onExport, canE
     {(focus?.kind === "ACTIVITY" || focus?.kind === "GATE") && <>
     <div id="activity-links">
     <h4>Dependencies for {focus.id}</h4>
+    <DependencyNeighborhood key={`${focus.kind}:${focus.id}`} project={project} focus={{ kind: focus.kind, id: focus.id }}
+      onSelect={onSelect} disabled={disabled} onConnect={(direction, node) => {
+        begin(direction === "in" ? "target" : "source", node);
+        window.setTimeout(() => document.querySelector('[aria-label="FS dependency form"]')?.scrollIntoView?.({ behavior: "smooth", block: "nearest" }), 0);
+      }} />
     {linked.length ? <ul className="model-dependencies">{linked.map(({ row, index }) => <li key={index}>
       <div><code>{String(row.dependency_id)}</code> · {String(row.source_id)} → {String(row.target_id)} · {String(row.lag_h)} h · {row.enabled === true ? "Active" : "Inactive"}</div>
       <div className="model-row-actions"><button type="button" onClick={() => pick(String(row.dependency_id))} disabled={disabled}>Edit {String(row.dependency_id)}</button>

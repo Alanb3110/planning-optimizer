@@ -2,6 +2,40 @@ import { resolve } from "node:path";
 import { expect, test } from "@playwright/test";
 
 for (const width of [1366, 390]) {
+  test(`graph-assisted FS link at ${width}px`, async ({ page }, testInfo) => {
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto("/");
+    await page.getByLabel("Select a local .xlsx file").setInputFiles(resolve("../examples/synthetic_project.xlsx"));
+    const tree = page.getByLabel("Systems, packages, activities and gates");
+    await tree.getByRole("button", { name: /gate Skid accepted and available SKID_AVAILABLE/ }).click();
+    const graph = page.getByLabel("Direct dependency graph for SKID_AVAILABLE");
+    await expect(graph.getByRole("heading", { name: /Predecessors \(1\)/ })).toBeVisible();
+    await expect(graph.getByText("DEP_001")).toBeVisible();
+    await graph.getByLabel("Choose successor").selectOption("GATE:PROJECT_COMPLETE");
+    await graph.getByRole("button", { name: "Review FS lag and justification" }).click();
+    const form = page.getByLabel("FS dependency form");
+    await expect(form.getByLabel("Predecessor ID")).toHaveValue("SKID_AVAILABLE");
+    await expect(form.getByLabel("Successor ID")).toHaveValue("PROJECT_COMPLETE");
+    await form.getByLabel("Dependency ID").fill("GRAPH_FICTION_FS");
+    await form.getByLabel("Lag (h)").fill("2");
+    await form.getByLabel("Justification").fill("Fictional review of the graph flow");
+    await form.getByRole("button", { name: "Add dependency" }).click();
+    await expect(graph.getByText("GRAPH_FICTION_FS")).toBeVisible();
+    await expect(graph.getByText("FS · +2 h · Active")).toBeVisible();
+    await graph.screenshot({ path: testInfo.outputPath(`dependency-graph-${width}.png`) });
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1)).toBe(true);
+    await page.getByRole("button", { name: "Calculate schedule" }).click();
+    await expect(page.getByLabel("Schedule summary")).toContainText("Optimal", { timeout: 220_000 });
+    const download = page.waitForEvent("download");
+    await page.getByRole("button", { name: "Download new .xlsx revision" }).click();
+    await page.getByLabel("Select a local .xlsx file").setInputFiles(await (await download).path());
+    await expect(page.getByLabel("Workbook validation summary")).toContainText("Workbook accepted");
+    await tree.getByRole("button", { name: /gate Skid accepted and available SKID_AVAILABLE/ }).click();
+    await expect(page.getByLabel("Direct dependency graph for SKID_AVAILABLE").getByText("GRAPH_FICTION_FS")).toBeVisible();
+  });
+}
+
+for (const width of [1366, 390]) {
   test(`fictional workbook editing journey at ${width}px`, async ({ page }, testInfo) => {
     await page.setViewportSize({ width, height: 900 });
     page.setDefaultTimeout(10_000);

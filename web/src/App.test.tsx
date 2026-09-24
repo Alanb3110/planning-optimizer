@@ -167,7 +167,7 @@ describe("AIT Planning Optimizer workspace", () => {
     expect(screen.getByRole("button", { name: "Download new .xlsx revision" })).toBeEnabled();
   });
 
-  it("blocks solving and revision export after a fictional cycle, then allows removal and reprioritization", async () => {
+  it("rejects a fictional cycle before saving and still validates gate reprioritization", async () => {
     const actual = await vi.importActual<typeof import("./lib/workbookImport")>("./lib/workbookImport");
     const bytes = new Uint8Array(await readFile(resolve(process.cwd(), "public/synthetic_project.xlsx")));
     vi.mocked(importWorkbook).mockResolvedValue(await actual.importWorkbook(bytes));
@@ -189,12 +189,10 @@ describe("AIT Planning Optimizer workspace", () => {
     fireEvent.change(screen.getByLabelText("Successor ID"), { target: { value: "PREPARE_FOUNDATION" } });
     fireEvent.change(screen.getByLabelText("Justification"), { target: { value: "Fictional cycle for validation" } });
     fireEvent.click(screen.getByRole("button", { name: "Add dependency" }));
-    expect(screen.getByText(/DEPENDENCY_CYCLE/)).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Calculate schedule" })).toBeDisabled();
-    expect(screen.getByRole("button", { name: "Download new .xlsx revision" })).toBeDisabled();
-    const addedRow = screen.getByText("DEP_CYCLE", { selector: ".model-dependencies code" }).closest("li")!;
-    fireEvent.click(within(addedRow).getByRole("button", { name: "Remove" }));
+    expect(screen.getByRole("alert")).toHaveTextContent(/dependency cycle/);
+    expect(screen.queryByText("DEP_CYCLE", { selector: ".model-dependencies code" })).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Calculate schedule" })).toBeEnabled();
+    fireEvent.click(screen.getByRole("button", { name: "Cancel edit" }));
     const rank = screen.getByText("PROJECT_COMPLETE", { selector: ".model-priority code" })
       .closest(".model-priority")!.querySelector("input[type=number]")!;
     fireEvent.change(rank, { target: { value: "" } });
