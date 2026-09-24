@@ -38,6 +38,13 @@ for (const width of [1366, 390]) {
     await page.getByLabel("Lag (h)").fill("1");
     await page.getByLabel("Justification").fill("Fictitious sequencing for UX verification");
     await page.getByRole("button", { name: "Add dependency" }).click();
+    await page.getByRole("button", { name: "Add successor" }).click();
+    await page.getByLabel("Dependency ID").fill("UX_TO_COMPLETE");
+    await page.getByLabel("Successor type").selectOption("GATE");
+    await page.getByLabel("Successor ID").selectOption("PROJECT_COMPLETE");
+    await page.getByLabel("Lag (h)").fill("0");
+    await page.getByLabel("Justification").fill("Fictitious check must finish before project completion");
+    await page.getByRole("button", { name: "Add dependency" }).click();
     await expect(page.getByLabel("Workbook validation summary")).toContainText("Edited model valid");
     await page.getByLabel("Imported workbook explorer").screenshot({ path: testInfo.outputPath(`ux-after-${width}.jpg`), type: "jpeg", quality: 80 });
 
