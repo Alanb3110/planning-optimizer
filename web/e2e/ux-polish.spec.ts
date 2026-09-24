@@ -4,6 +4,7 @@ import { expect, test } from "@playwright/test";
 for (const width of [1366, 390]) {
   test(`fictional workbook editing journey at ${width}px`, async ({ page }, testInfo) => {
     await page.setViewportSize({ width, height: 900 });
+    page.setDefaultTimeout(10_000);
     await page.goto("/");
     await page.getByLabel("Select a local .xlsx file").setInputFiles(resolve("../examples/synthetic_project.xlsx"));
     await expect(page.getByLabel("Workbook validation summary")).toContainText("Workbook accepted");
@@ -23,7 +24,9 @@ for (const width of [1366, 390]) {
     await page.getByLabel("Role / pool").selectOption("INSTALL_CREW");
     await page.getByRole("button", { name: "Save change" }).click();
     await page.getByRole("button", { name: "Add zone occupancy" }).click();
-    await page.getByLabel("Zone", { exact: true }).selectOption("ASSEMBLY_AREA");
+    await expect(page.getByRole("combobox", { name: "Constraint table" })).toHaveValue("activity_zones");
+    await expect(page.getByLabel("Edit Activity zone occupancy")).toBeVisible();
+    await page.getByRole("combobox", { name: "Zone", exact: true }).selectOption("ASSEMBLY_AREA");
     await page.getByRole("button", { name: "Save change" }).click();
     await expect(page.getByLabel("Demands for UX_FICTIONAL_CHECK"))
       .toContainText("1 role demand(s) · 1 zone occupancy row(s)");

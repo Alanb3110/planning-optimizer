@@ -89,10 +89,13 @@ describe("AIT Planning Optimizer workspace", () => {
     fireEvent.click(screen.getByRole("button", { name: "Add role demand" }));
     expect(screen.getByLabelText("Edit Activity role demand")).toBeInTheDocument();
     expect(screen.getByLabelText("Role / pool")).toHaveTextContent("INSTALL_CREW · Installation crew");
-    fireEvent.click(within(screen.getByLabelText("Edit Activity role demand")).getByRole("button", { name: "Cancel" }));
+    fireEvent.change(screen.getByLabelText("Role / pool"), { target: { value: "INSTALL_CREW" } });
+    fireEvent.click(within(screen.getByLabelText("Edit Activity role demand")).getByRole("button", { name: "Save change" }));
     fireEvent.click(screen.getByRole("button", { name: "Add zone occupancy" }));
     expect(screen.getByLabelText("Edit Activity zone occupancy")).toBeInTheDocument();
-    fireEvent.click(within(screen.getByLabelText("Edit Activity zone occupancy")).getByRole("button", { name: "Cancel" }));
+    fireEvent.change(screen.getByLabelText("Zone"), { target: { value: "ASSEMBLY_AREA" } });
+    fireEvent.click(within(screen.getByLabelText("Edit Activity zone occupancy")).getByRole("button", { name: "Save change" }));
+    expect(screen.getByLabelText("Demands for LOX_FICTIONAL_CHECK")).toHaveTextContent("1 role demand(s) · 1 zone occupancy row(s)");
     expect(screen.getByRole("button", { name: "Calculate schedule" })).toBeEnabled();
     fireEvent.click(screen.getByRole("button", { name: "Add successor" }));
     expect(screen.getByLabelText("Successor ID")).toHaveTextContent("PROJECT_COMPLETE · Synthetic project complete");
