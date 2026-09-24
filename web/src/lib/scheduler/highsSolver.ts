@@ -1,6 +1,7 @@
 import type { Highs, ModelData } from "highs";
 import { segmentsFromSlots } from "./calendar";
 import { buildScheduleMilp } from "./milp";
+import { validateSolvedSchedule } from "./verifySchedule";
 import type {
   ScheduleResult,
   SchedulingProject,
@@ -104,38 +105,4 @@ export function solveScheduleWithHighs(
   });
 }
 
-export function validateSolvedSchedule(
-  project: SchedulingProject,
-  result: ScheduleResult,
-): string[] {
-  const errors: string[] = [];
-  const activityById = Object.fromEntries(
-    project.activities.filter((activity) => activity.enabled !== false).map((activity) => [activity.activity_id, activity]),
-  );
-
-  for (const [activityId, scheduled] of Object.entries(result.activities)) {
-    const activity = activityById[activityId];
-    const expected = Math.round(activity.duration_h);
-    if (scheduled.workSlots.length !== expected) {
-      errors.push(`${activityId}: scheduled ${scheduled.workSlots.length} h, expected ${expected} h.`);
-    }
-    if (activity.duration_basis === "WORK_TIME" && !activity.preemptible && scheduled.segments.length !== 1) {
-      errors.push(`${activityId}: non-interruptible work is split.`);
-    }
-  }
-
-  for (const dependency of project.dependencies) {
-    if (!dependency.enabled) continue;
-    const source = dependency.source_type === "ACTIVITY"
-      ? result.activities[dependency.source_id]?.endH
-      : result.gates[dependency.source_id];
-    const target = dependency.target_type === "ACTIVITY"
-      ? result.activities[dependency.target_id]?.startH
-      : result.gates[dependency.target_id];
-    if (source === undefined || target === undefined) continue;
-    if (target < source + Number(dependency.lag_h ?? 0)) {
-      errors.push(`${dependency.dependency_id}: FS constraint violated.`);
-    }
-  }
-  return errors;
-}
+export { validateSolvedSchedule } from "./verifySchedule";
