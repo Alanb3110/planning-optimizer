@@ -43,7 +43,8 @@ for (const width of [1366, 390]) {
 
     await page.getByRole("searchbox", { name: "Search by ID or name" }).fill("PROJECT_COMPLETE");
     await page.getByRole("button", { name: /gate Synthetic project complete PROJECT_COMPLETE/ }).click();
-    await expect(page.getByLabel("Rank")).toHaveValue("1");
+    await expect(page.locator(".model-priority").filter({ hasText: "PROJECT_COMPLETE" })
+      .getByRole("spinbutton", { name: "Rank" })).toHaveValue("1");
     await page.getByRole("button", { name: "Calculate schedule" }).click();
     await expect(page.getByLabel("Schedule summary")).toContainText("Optimal", { timeout: 220_000 });
     await expect(page.getByLabel("Scrollable activity Gantt")).toContainText("UX_FICTIONAL_CHECK");
