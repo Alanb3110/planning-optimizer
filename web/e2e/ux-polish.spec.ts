@@ -114,7 +114,7 @@ for (const width of [1366, 390]) {
     await page.getByLabel("Select a local .xlsx file").setInputFiles(await (await download).path());
     await expect(page.getByLabel("Workbook validation summary")).toContainText("Workbook accepted");
     await expect(page.getByLabel("Workbook entity counts")).toContainText(/9\s*activities/);
-    await tree.getByRole("button", { name: /activity Fictional guided A GUIDE_FICTION_A/ }).click();
+    await tree.getByRole("button", { name: "activity Fictional guided A GUIDE_FICTION_A Active", exact: true }).click();
     await expect(page.getByLabel("Demands for GUIDE_FICTION_A")).toContainText("1 role demand(s)");
     await expect(page.getByLabel("Review activity GUIDE_FICTION_A")).toContainText("GUIDE_FICTION_B");
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1)).toBe(true);
