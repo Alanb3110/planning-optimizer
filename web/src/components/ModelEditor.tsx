@@ -1,5 +1,6 @@
 import { useState } from "react";
 import type { NormalizedProject, NormalizedRecord } from "../lib/model";
+import { duplicateActivity } from "../lib/modelEdits";
 import { EntityEditor } from "./EntityEditor";
 import { ConstraintEditor } from "./ConstraintEditor";
 
@@ -21,6 +22,9 @@ export function ModelEditor({ project, focus, onChange, onSelect, onExport, canE
   const [exportError, setExportError] = useState("");
   const [exporting, setExporting] = useState(false);
   const [exported, setExported] = useState("");
+  const [copySource, setCopySource] = useState("");
+  const [editRequest, setEditRequest] = useState<{ token: number; mode: "edit" | "new" }>();
+  const [addRequest, setAddRequest] = useState<{ token: number; kind: "activity_resources" | "activity_zones" }>();
 
   const pick = (id: string) => {
     const row = project.dependencies.find((item) => item.dependency_id === id);
@@ -68,6 +72,29 @@ export function ModelEditor({ project, focus, onChange, onSelect, onExport, canE
     focus !== null && ((row.source_type === focus.kind && row.source_id === focus.id) ||
     (row.target_type === focus.kind && row.target_id === focus.id)));
   const selectedGate = focus?.kind === "GATE" ? project.gates.find((row) => row.gate_id === focus.id) : undefined;
+  const activity = focus?.kind === "ACTIVITY" ? project.activities.find((row) => row.activity_id === focus.id) : undefined;
+  const activityPackage = activity && project.packages.find((row) => row.package_id === activity.package_id);
+  const activitySystem = activityPackage && project.systems.find((row) => row.system_id === activityPackage.system_id);
+  const siblings = project.activities.filter((row) => row.package_id === (activityPackage?.package_id ?? (focus?.kind === "PACKAGE" ? focus.id : undefined)));
+  const roleRows = project.activity_resources.filter((row) => row.activity_id === focus?.id);
+  const zoneRows = project.activity_zones.filter((row) => row.activity_id === focus?.id);
+  const inbound = linked.filter(({ row }) => row.target_type === "ACTIVITY" && row.target_id === focus?.id && row.enabled === true);
+  const outbound = linked.filter(({ row }) => row.source_type === "ACTIVITY" && row.source_id === focus?.id && row.enabled === true);
+  const calendar = activity?.calendar_id || project.metadata.active_calendar;
+  const reviewItems = activity ? [
+    { label: "Duration and calendar", detail: `${String(activity.duration_h)} h · ${String(activity.duration_basis)} · ${calendar ? `${calendar}${activity.calendar_id ? " (activity)" : " (project default)"}` : "no calendar"} · ${activity.preemptible ? "interruptible" : "continuous"}`, pending: !calendar, target: "activity-identity" },
+    { label: "System arrival", detail: `${activity.requires_system_arrival === false ? "Not required" : "Required"} · ${String(activitySystem?.arrival_date ?? "arrival not set")}`, pending: !activitySystem || !activitySystem.arrival_date || activity.requires_system_arrival === false, target: "activity-identity" },
+    { label: "Role demand", detail: roleRows.length ? roleRows.map((row) => `${String(row.resource_id)} × ${String(row.quantity)}`).join("; ") : "No role demand", pending: !roleRows.length, target: "activity-constraints" },
+    { label: "Zone occupancy", detail: zoneRows.length ? zoneRows.map((row) => `${String(row.zone_id)} · ${String(row.load)}${row.exclusive ? " exclusive" : ""}`).join("; ") : "No zone occupancy", pending: !zoneRows.length, target: "activity-constraints" },
+    { label: "FS predecessors", detail: inbound.length ? inbound.map(({ row }) => `${String(row.source_id)} + ${String(row.lag_h ?? 0)} h`).join("; ") : "No active predecessor", pending: !inbound.length, target: "activity-links" },
+    { label: "FS successors", detail: outbound.length ? outbound.map(({ row }) => `${String(row.target_id)} + ${String(row.lag_h ?? 0)} h`).join("; ") : "No active successor", pending: !outbound.length, target: "activity-links" },
+  ] : [];
+  const openReview = (label: string, target: string) => {
+    if (label === "Duration and calendar" || label === "System arrival") setEditRequest((value) => ({ token: (value?.token ?? 0) + 1, mode: "edit" }));
+    else if (label === "Role demand" || label === "Zone occupancy") setAddRequest((current) => ({ token: (current?.token ?? 0) + 1, kind: label === "Role demand" ? "activity_resources" : "activity_zones" }));
+    else begin(label === "FS predecessors" ? "target" : "source");
+    window.setTimeout(() => document.getElementById(target)?.scrollIntoView({ behavior: "smooth", block: "start" }), 0);
+  };
   const priorityRow = (gate: NormalizedRecord) => {
     const id = String(gate.gate_id);
     const row = project.milestone_priorities.find((item) => item.gate_id === id);
@@ -97,9 +124,41 @@ export function ModelEditor({ project, focus, onChange, onSelect, onExport, canE
   </div>;
 
   return <div className="model-editor" aria-label="Model editing">
-    <EntityEditor project={project} focus={focus} onChange={onChange} onSelect={onSelect} disabled={disabled} />
-    <ConstraintEditor project={project} activityId={focus?.kind === "ACTIVITY" ? focus.id : undefined} onChange={onChange} disabled={disabled} />
+    {focus?.kind === "PACKAGE" && <section className="activity-guide" aria-label={`Compose activities in ${focus.id}`}>
+      <h4>Compose activities in {focus.id}</h4>
+      <p>Create an activity below, or copy one already in this package. Copies retain duration, calendar, role and zone rows; review all fields and add only justified FS links.</p>
+      <a className="guide-create" href="#activity-identity">Create an activity in this package ↓</a>
+      {siblings.length > 0 && <div className="guide-copy"><label>Copy an activity
+        <select aria-label="Activity to duplicate" value={copySource} onChange={(event) => setCopySource(event.target.value)} disabled={disabled}>
+          <option value="">Select an activity…</option>{siblings.map((row) => <option key={String(row.activity_id)} value={String(row.activity_id)}>{String(row.activity_id)} · {String(row.name)}</option>)}
+        </select></label>
+        <button type="button" disabled={disabled || !copySource} onClick={() => {
+          const result = duplicateActivity(project, copySource);
+          onChange(result.project); onSelect({ kind: "ACTIVITY", id: result.id });
+        }}>Duplicate selected activity</button></div>}
+      <p>{siblings.length} activit{siblings.length === 1 ? "y" : "ies"} in this package. Select each activity to review its constraints before moving on.</p>
+    </section>}
+    {activity && <section className="activity-guide" aria-label={`Review activity ${focus?.id}`}>
+      <div className="guide-heading"><div><h4>Review activity {focus?.id}</h4><p>Package {String(activity.package_id)} · Review before selecting another activity.</p></div>
+        {activityPackage && <button type="button" onClick={() => onSelect({ kind: "PACKAGE", id: String(activityPackage.package_id) })}>Back to package</button>}</div>
+      <p className="guide-notice" role="status">{reviewItems.filter((item) => item.pending).length} item(s) to confirm. Empty demands or links can be intentional; nothing is added automatically. A populated item still needs an operational review.</p>
+      <ol className="guide-checklist">{reviewItems.map((item) => <li key={item.label}>
+        <strong>{item.label}</strong><span>{item.detail}</span><em>{item.pending ? "To confirm" : "Recorded · review"}</em>
+        <button type="button" disabled={disabled} onClick={() => openReview(item.label, item.target)}>{item.label.startsWith("FS") ? "Add / review link" : item.label === "Role demand" || item.label === "Zone occupancy" ? "Add / review" : "Edit / review"}</button>
+      </li>)}</ol>
+      <div className="guide-siblings"><strong>Continue in this package</strong><div className="model-row-actions">
+        <button type="button" disabled={disabled} onClick={() => { setEditRequest((value) => ({ token: (value?.token ?? 0) + 1, mode: "new" })); window.setTimeout(() => document.getElementById("activity-identity")?.scrollIntoView({ behavior: "smooth" }), 0); }}>Create next activity</button>
+        {siblings.filter((row) => row.activity_id !== focus?.id).map((row) =>
+        <button key={String(row.activity_id)} type="button" onClick={() => onSelect({ kind: "ACTIVITY", id: String(row.activity_id) })}>{String(row.activity_id)}</button>)}</div></div>
+    </section>}
+    <div id="activity-identity">
+    <EntityEditor project={project} focus={focus} onChange={onChange} onSelect={onSelect} disabled={disabled} editRequest={editRequest} />
+    </div>
+    <div id="activity-constraints">
+    <ConstraintEditor project={project} activityId={focus?.kind === "ACTIVITY" ? focus.id : undefined} onChange={onChange} disabled={disabled} addRequest={addRequest} />
+    </div>
     {(focus?.kind === "ACTIVITY" || focus?.kind === "GATE") && <>
+    <div id="activity-links">
     <h4>Dependencies for {focus.id}</h4>
     {linked.length ? <ul className="model-dependencies">{linked.map(({ row, index }) => <li key={index}>
       <div><code>{String(row.dependency_id)}</code> · {String(row.source_id)} → {String(row.target_id)} · {String(row.lag_h)} h · {row.enabled === true ? "Active" : "Inactive"}</div>
@@ -120,6 +179,7 @@ export function ModelEditor({ project, focus, onChange, onSelect, onExport, canE
       <button type="button" onClick={() => { setFormOpen(false); setFormError(""); }} disabled={disabled}>Cancel edit</button>
       {formError && <p role="alert">{formError}</p>}
     </div>}
+    </div>
     </>}
     {selectedGate && <><h4>Priority for this gate</h4>{priorityRow(selectedGate)}</>}
     <details className="model-all-priorities"><summary>Manage all gate priorities</summary>

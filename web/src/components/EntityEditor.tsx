@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { NormalizedProject, NormalizedRecord } from "../lib/model";
 import { duplicateActivity, duplicatePackage } from "../lib/modelEdits";
 
@@ -13,9 +13,9 @@ const config = {
 const bool = (value: unknown) => value === true;
 const str = (value: unknown) => String(value ?? "");
 
-export function EntityEditor({ project, focus, onChange, onSelect, disabled }: {
+export function EntityEditor({ project, focus, onChange, onSelect, disabled, editRequest }: {
   project: NormalizedProject; focus: Selection | null;
-  onChange: (project: NormalizedProject) => void;
+  editRequest?: { token: number; mode: "edit" | "new" }; onChange: (project: NormalizedProject) => void;
   onSelect: (selection: Selection) => void; disabled: boolean;
 }) {
   const [kind, setKind] = useState<Kind | null>(null);
@@ -29,11 +29,13 @@ export function EntityEditor({ project, focus, onChange, onSelect, disabled }: {
     setDraft(row ? { ...row } : nextKind === "SYSTEM" ? { enabled: true }
       : nextKind === "PACKAGE" ? { enabled: true, system_id: focus?.kind === "SYSTEM" ? focus.id : "" }
       : nextKind === "ACTIVITY" ? { enabled: true, preemptible: false, requires_system_arrival: true,
-        duration_basis: "WORK_TIME", package_id: focus?.kind === "PACKAGE" ? focus.id : "" }
+        duration_basis: "WORK_TIME", package_id: focus?.kind === "PACKAGE" ? focus.id
+          : focus?.kind === "ACTIVITY" ? project.activities.find((item) => item.activity_id === focus.id)?.package_id : "" }
       : { exposed: true, is_project_milestone: false,
         system_id: focus?.kind === "SYSTEM" ? focus.id : "",
         package_id: focus?.kind === "PACKAGE" ? focus.id : "" });
   };
+  useEffect(() => { if (editRequest && focus?.kind === "ACTIVITY") start("ACTIVITY", editRequest.mode === "edit"); }, [editRequest?.token]);
   const field = (name: string, label: string, required = false, type = "text") => <label key={name}>{label}
     <input type={type} required={required} value={str(draft[name])} disabled={disabled || (editing && config[kind!].id === name)}
       onChange={(event) => setDraft({ ...draft, [name]: event.target.value })} />
@@ -98,6 +100,7 @@ export function EntityEditor({ project, focus, onChange, onSelect, disabled }: {
     <h4>Systems, packages, activities and gates</h4>
     {focus && <div className="model-row-actions contextual-actions">
       {focus?.kind === "PACKAGE" && <button type="button" onClick={() => start("ACTIVITY")} disabled={disabled}>Add activity to {focus.id}</button>}
+      {focus?.kind === "ACTIVITY" && <button type="button" onClick={() => start("ACTIVITY")} disabled={disabled}>Add another activity to this package</button>}
       {focus && <button type="button" onClick={() => start(focus.kind, true)} disabled={disabled}>Edit {focus.kind.toLowerCase()} {focus.id}</button>}
       {(focus?.kind === "ACTIVITY" || focus?.kind === "PACKAGE") &&
         <button type="button" onClick={duplicate} disabled={disabled}>Duplicate {focus.kind.toLowerCase()} {focus.id}</button>}

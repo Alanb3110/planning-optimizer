@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { NormalizedProject, NormalizedRecord } from "../lib/model";
 import { validateProject } from "../lib/validation";
 
@@ -33,8 +33,9 @@ const labels: Record<Kind, string> = {
 const ids: Partial<Record<Kind, string>> = { resources: "resource_id", zones: "zone_id", calendars: "calendar_id" };
 const str = (value: unknown) => String(value ?? "");
 
-export function ConstraintEditor({ project, activityId, onChange, disabled }: {
-  project: NormalizedProject; activityId?: string; onChange: (project: NormalizedProject) => void; disabled: boolean;
+export function ConstraintEditor({ project, activityId, onChange, disabled, addRequest }: {
+  project: NormalizedProject; activityId?: string; addRequest?: { token: number; kind: "activity_resources" | "activity_zones" };
+  onChange: (project: NormalizedProject) => void; disabled: boolean;
 }) {
   const [kind, setKind] = useState<Kind>(activityId ? "activity_resources" : "resources");
   const [scope, setScope] = useState("");
@@ -68,6 +69,7 @@ export function ConstraintEditor({ project, activityId, onChange, disabled }: {
       : { calendar_id: scope, weekday: "MON", shift_name: "", start_time: "08:00", end_time: "16:00", enabled: true }
       : { ...rows[i] });
   };
+  useEffect(() => { if (addRequest && activityId) begin(null, addRequest.kind); }, [addRequest?.token]);
   const update = (key: string, value: unknown) => setDraft((current) => {
     if (!current) return current;
     const next = { ...current };

@@ -107,6 +107,45 @@ describe("AIT Planning Optimizer workspace", () => {
     expect(screen.getByRole("button", { name: "Download new .xlsx revision" })).toBeEnabled();
   });
 
+  it("guides consecutive fictional activities inside one package without inventing demands or links", async () => {
+    const actual = await vi.importActual<typeof import("./lib/workbookImport")>("./lib/workbookImport");
+    vi.mocked(importWorkbook).mockResolvedValue(await actual.importWorkbook(
+      new Uint8Array(await readFile(resolve(process.cwd(), "public/synthetic_project.xlsx")))));
+    render(<App />);
+    selectWorkbook("synthetic_project.xlsx");
+    await screen.findByText("Workbook accepted");
+    const tree = screen.getByLabelText("Systems, packages, activities and gates");
+    fireEvent.click(within(tree).getByRole("button", { name: /SKID_INSTALLATION/ }));
+    expect(screen.getByLabelText("Compose activities in SKID_INSTALLATION")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Add activity to SKID_INSTALLATION" }));
+    const form = screen.getByLabelText("New activity form");
+    expect(within(form).getByLabelText("Package")).toHaveValue("SKID_INSTALLATION");
+    fireEvent.change(within(form).getByLabelText("activity ID"), { target: { value: "FICTION_A" } });
+    fireEvent.change(within(form).getByLabelText("Name"), { target: { value: "Fictional A" } });
+    fireEvent.change(within(form).getByLabelText("Nominal duration (h)"), { target: { value: "2" } });
+    fireEvent.click(within(form).getByRole("button", { name: "Add activity" }));
+    let guide = screen.getByLabelText("Review activity FICTION_A");
+    expect(guide).toHaveTextContent("No role demand");
+    expect(guide).toHaveTextContent("No zone occupancy");
+    expect(guide).toHaveTextContent("No active predecessor");
+    expect(guide).toHaveTextContent("No active successor");
+    fireEvent.click(within(guide).getAllByRole("button", { name: "Add / review" })[0]);
+    expect(screen.getByLabelText("Edit Activity role demand")).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText("Role / pool"), { target: { value: "INSTALL_CREW" } });
+    fireEvent.click(within(screen.getByLabelText("Edit Activity role demand")).getByRole("button", { name: "Save change" }));
+    guide = screen.getByLabelText("Review activity FICTION_A");
+    expect(guide).toHaveTextContent("INSTALL_CREW × 1");
+    fireEvent.click(within(guide).getByRole("button", { name: "Create next activity" }));
+    const nextForm = screen.getByLabelText("New activity form");
+    expect(within(nextForm).getByLabelText("Package")).toHaveValue("SKID_INSTALLATION");
+    fireEvent.change(within(nextForm).getByLabelText("activity ID"), { target: { value: "FICTION_B" } });
+    fireEvent.change(within(nextForm).getByLabelText("Name"), { target: { value: "Fictional B" } });
+    fireEvent.change(within(nextForm).getByLabelText("Nominal duration (h)"), { target: { value: "3" } });
+    fireEvent.click(within(nextForm).getByRole("button", { name: "Add activity" }));
+    expect(screen.getByLabelText("Review activity FICTION_B")).toHaveTextContent("No role demand");
+    expect(screen.getByLabelText("Workbook entity counts")).toHaveTextContent(/8\s*activities/);
+  });
+
   it("duplicates a package and lets the user edit its new ID's descriptive fields", async () => {
     const actual = await vi.importActual<typeof import("./lib/workbookImport")>("./lib/workbookImport");
     vi.mocked(importWorkbook).mockResolvedValue(await actual.importWorkbook(

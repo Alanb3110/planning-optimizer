@@ -71,3 +71,52 @@ for (const width of [1366, 390]) {
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1)).toBe(true);
   });
 }
+
+for (const width of [1366, 390]) {
+  test(`compose consecutive fictional activities and reimport at ${width}px`, async ({ page }, testInfo) => {
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto("/");
+    await page.getByLabel("Select a local .xlsx file").setInputFiles(resolve("../examples/synthetic_project.xlsx"));
+    await expect(page.getByLabel("Workbook validation summary")).toContainText("Workbook accepted");
+    const tree = page.getByLabel("Systems, packages, activities and gates");
+    await tree.getByRole("button", { name: /package Installation SKID_INSTALLATION/ }).click();
+    await expect(page.getByLabel("Compose activities in SKID_INSTALLATION")).toBeVisible();
+    await page.getByRole("button", { name: "Add activity to SKID_INSTALLATION" }).click();
+    let form = page.getByLabel("New activity form");
+    await form.getByLabel("activity ID").fill("GUIDE_FICTION_A");
+    await form.getByLabel("Name").fill("Fictional guided A");
+    await form.getByLabel("Nominal duration (h)").fill("2");
+    await form.getByRole("button", { name: "Add activity" }).click();
+    const first = page.getByLabel("Review activity GUIDE_FICTION_A");
+    await expect(first).toContainText("No role demand");
+    await expect(first).toContainText("No zone occupancy");
+    await expect(first).toContainText("No active predecessor");
+    await first.getByRole("button", { name: "Add / review" }).first().click();
+    await page.getByLabel("Role / pool").selectOption("INSTALL_CREW");
+    await page.getByLabel("Edit Activity role demand").getByRole("button", { name: "Save change" }).click();
+    await expect(first).toContainText("INSTALL_CREW × 1");
+    await first.getByRole("button", { name: "Create next activity" }).click();
+    form = page.getByLabel("New activity form");
+    await expect(form.getByLabel("Package")).toHaveValue("SKID_INSTALLATION");
+    await form.getByLabel("activity ID").fill("GUIDE_FICTION_B");
+    await form.getByLabel("Name").fill("Fictional guided B");
+    await form.getByLabel("Nominal duration (h)").fill("3");
+    await form.getByRole("button", { name: "Add activity" }).click();
+    await expect(page.getByLabel("Review activity GUIDE_FICTION_B")).toContainText("No role demand");
+    await page.getByRole("button", { name: "Back to package" }).click();
+    await page.getByLabel("Activity to duplicate").selectOption("GUIDE_FICTION_A");
+    await page.getByRole("button", { name: "Duplicate selected activity" }).click();
+    await expect(page.getByLabel("Review activity GUIDE_FICTION_A_COPY")).toContainText("INSTALL_CREW × 1");
+    await expect(page.getByLabel("Review activity GUIDE_FICTION_A_COPY")).toContainText("No active predecessor");
+    await page.getByLabel("Imported workbook explorer").screenshot({ path: testInfo.outputPath(`guide-${width}.png`) });
+    const download = page.waitForEvent("download");
+    await page.getByRole("button", { name: "Download new .xlsx revision" }).click();
+    await page.getByLabel("Select a local .xlsx file").setInputFiles(await (await download).path());
+    await expect(page.getByLabel("Workbook validation summary")).toContainText("Workbook accepted");
+    await expect(page.getByLabel("Workbook entity counts")).toContainText(/9\s*activities/);
+    await tree.getByRole("button", { name: /activity Fictional guided A GUIDE_FICTION_A/ }).click();
+    await expect(page.getByLabel("Demands for GUIDE_FICTION_A")).toContainText("1 role demand(s)");
+    await expect(page.getByLabel("Review activity GUIDE_FICTION_A")).toContainText("GUIDE_FICTION_B");
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1)).toBe(true);
+  });
+}
