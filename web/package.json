@@ -11,7 +11,11 @@
     "test": "vitest run",
     "test:browser": "playwright test",
     "prebuild": "npm run generate:schema-validator",
-    "build": "tsc -b && vite build && node scripts/check-built-csp.mjs"
+    "build": "tsc -b && vite build && node scripts/check-built-csp.mjs",
+    "build:benchmark": "npm run generate:schema-validator && tsc -b && BENCHMARK_BUILD=1 vite build && node scripts/check-built-csp.mjs",
+    "generate:benchmark": "node scripts/generate-benchmark.mjs ../../benchmark-artifacts",
+    "test:benchmark-fixture": "node --test scripts/generate-benchmark.test.mjs",
+    "benchmark": "node scripts/run-benchmark.mjs"
   },
   "dependencies": {
     "ajv": "^8.17.1",
