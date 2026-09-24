@@ -571,3 +571,89 @@ td > strong { color: #183641; }
   border-color: var(--dark-accent);
 }
 @media (max-width: 900px) { .model-fields { grid-template-columns: 1fr; } .model-priority { grid-template-columns: 1fr 1fr; } .model-priority code { grid-column: 1 / -1; } }
+
+/* Surface system: a softer visual hierarchy without changing the scheduling UI. */
+:root {
+  --surface-radius: 16px;
+  --inset-radius: 12px;
+  --control-radius: 9px;
+  --surface-shadow: 0 12px 32px rgba(22, 48, 45, 0.07);
+}
+:root[data-theme="dark"] {
+  --surface-shadow: 0 16px 40px rgba(0, 0, 0, 0.22);
+}
+.app-shell { gap: 1.15rem; padding-top: 1.15rem; }
+.app-header, .control-panel, .validation-strip, .issues-panel, .output-panel,
+.result-section, .result-metrics, .workbook-explorer {
+  border-radius: var(--surface-radius);
+  box-shadow: var(--surface-shadow);
+}
+.app-header { padding: 1rem 1.2rem; }
+h1 { font-size: clamp(1.35rem, 2.2vw, 1.85rem); line-height: 1.16; }
+h2 { font-size: 1.08rem; }
+.control-panel { padding: 1.15rem; }
+.workbook-explorer { padding: 1.2rem; }
+.output-panel { isolation: isolate; }
+.panel-heading { margin-bottom: 1rem; }
+.file-type, .local-badge, .basis-badge, .gate-badge { border-radius: 999px; }
+.privacy-dot, .status-symbol, .validation-state > span { border-radius: 50%; }
+.file-picker, .number-input, .workbook-browser, .workbook-details, .model-fields,
+.contextual-actions, .activity-demands, .constraint-preview, .explanation-caveat,
+.workbook-caveat, .export-toolbar, .terminal-state, .issue-group li {
+  border-radius: var(--inset-radius);
+}
+.file-picker { padding: 0.85rem; }
+.workbook-browser, .workbook-details { padding: 1rem; }
+.workbook-tree { margin-top: 0.75rem; }
+.workbook-item { border-radius: 8px; padding: 0.48rem 0.65rem; }
+.workbook-item[aria-current="true"] { padding-left: calc(0.65rem - 2px); }
+.workbook-item + .workbook-item { margin-top: 0.1rem; }
+.model-fields { padding: 0.95rem; background: #f9fbfa; }
+.model-fields label, .model-priority label, .revision-comment { gap: 0.35rem; font-size: 0.74rem; }
+.model-fields input, .model-fields select, .model-priority input, .revision-comment input,
+.workbook-browser > input, .constraint-editor select, .explanation select {
+  border-radius: var(--control-radius);
+  min-height: 38px;
+  padding: 0.5rem 0.65rem;
+}
+.model-fields input[type="checkbox"], .model-priority input[type="checkbox"] { min-height: 0; }
+.secondary-button, .primary-button, .cancel-button, .export-button, .theme-toggle,
+.model-editor button { border-radius: var(--control-radius); }
+.model-editor button { min-height: 36px; padding: 0.48rem 0.72rem; font-size: 0.74rem; font-weight: 680; }
+.model-row-actions { gap: 0.45rem; }
+.contextual-actions, .activity-demands { padding: 0.75rem; }
+.primary-button, .export-button { box-shadow: 0 5px 14px rgba(12, 107, 89, 0.18); }
+.primary-button:disabled, .export-button:disabled { box-shadow: none; }
+.gantt-scroll, .table-scroll { border-radius: var(--inset-radius); }
+.gantt-segment { border-radius: 5px; }
+.export-toolbar { padding: 1rem; }
+.model-editor h4 { font-size: 0.83rem; }
+.workbook-item strong, .workbook-details p, .workbook-relations { font-size: 0.78rem; }
+:root[data-theme="dark"] .app-header {
+  background: linear-gradient(115deg, #17211f 0%, var(--dark-panel) 55%);
+}
+:root[data-theme="dark"] .model-fields {
+  background: #1a2023;
+  border-color: #455358;
+}
+:root[data-theme="dark"] .workbook-browser, :root[data-theme="dark"] .workbook-details {
+  background: #1c2326;
+}
+:root[data-theme="dark"] .model-editor button {
+  background: #263b35;
+  border-color: #628578;
+}
+:root[data-theme="dark"] .model-editor button:hover:not(:disabled) { background: #315247; }
+:root[data-theme="dark"] .primary-button, :root[data-theme="dark"] .export-button {
+  background: linear-gradient(180deg, #168e79, #117764);
+}
+:root[data-theme="dark"] .primary-button:hover:not(:disabled),
+:root[data-theme="dark"] .export-button:hover { background: #199883; }
+:root[data-theme="dark"] .primary-button:disabled { background: #28312f; }
+@media (max-width: 700px) {
+  .app-shell { gap: 0.8rem; padding-top: 0.5rem; }
+  .app-header, .control-panel, .workbook-explorer { padding: 0.85rem; }
+  .workbook-browser, .workbook-details { padding: 0.75rem; }
+  .app-header, .control-panel, .validation-strip, .issues-panel, .output-panel,
+  .result-section, .result-metrics, .workbook-explorer { border-radius: 12px; }
+}
