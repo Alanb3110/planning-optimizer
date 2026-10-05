@@ -3,6 +3,7 @@ import type {
   MilestonePriority,
   SchedulingActivity,
   SchedulingProject,
+  SolveDiagnostics,
   SolveOptions,
 } from "./types";
 
@@ -48,11 +49,24 @@ export interface BuiltScheduleMilp {
   executionChoices: Record<string, ExecutionChoice[]>;
   milestonePriorities: MilestonePriority[];
   objectiveGate: string;
+  diagnostics: SolveDiagnostics;
 }
 
 interface RowEntry {
   column: number;
   value: number;
+}
+
+function estimatedSparseModelBytes(model: SparseMilpModel): number {
+  return model.colCost.byteLength +
+    model.colLower.byteLength +
+    model.colUpper.byteLength +
+    model.rowLower.byteLength +
+    model.rowUpper.byteLength +
+    model.integrality.byteLength +
+    model.matrix.starts.byteLength +
+    model.matrix.indices.byteLength +
+    model.matrix.values.byteLength;
 }
 
 class ModelBuilder {
@@ -362,8 +376,21 @@ export function buildScheduleMilp(
   const completionGates = Object.values(gates).filter((gate) => gate.gate_type === "PROJECT_COMPLETE");
   if (completionGates.length !== 1) throw new Error("Exactly one active PROJECT_COMPLETE gate is required.");
 
+  const model = builder.finish();
+  const diagnostics: SolveDiagnostics = {
+    activeActivities: Object.keys(activities).length,
+    horizonH,
+    executionProfiles: Object.values(executionChoices)
+      .reduce((total, choices) => total + choices.length, 0),
+    columns: model.numCols,
+    rows: model.numRows,
+    nonzeros: model.matrix.values.length,
+    optimizationPasses: milestonePriorities.length + 1,
+    estimatedModelBytes: estimatedSparseModelBytes(model),
+  };
+
   return {
-    model: builder.finish(),
+    model,
     project,
     horizonH,
     activeActivities: activities,
@@ -373,5 +400,6 @@ export function buildScheduleMilp(
     executionChoices,
     milestonePriorities,
     objectiveGate: completionGates[0].gate_id,
+    diagnostics,
   };
 }

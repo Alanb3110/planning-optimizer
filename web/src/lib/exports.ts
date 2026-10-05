@@ -249,6 +249,7 @@ export function createScheduleBundle(input: ScheduleBundleInput): ScheduleBundle
         solver_message: input.result.solverMessage,
         solver_duration_ms: input.solveDurationMs,
         model_horizon_h: input.result.horizonH,
+        model_diagnostics: input.result.diagnostics ?? null,
         requested_horizon_days: input.settings.horizonDays,
         solver_time_limit_s: input.settings.timeLimitS,
       }),

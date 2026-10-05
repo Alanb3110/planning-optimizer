@@ -6,7 +6,14 @@ import type { RunSettings } from "./lib/exports";
 import { fetchLocalArrayBuffer } from "./lib/localAsset";
 import type { ValidationIssue, WorkbookImportResult } from "./lib/model";
 import { solveScheduleInWorker } from "./lib/scheduler/solverClient";
-import { asSchedulingProject, type ScheduleResult, type SolveProgress } from "./lib/scheduler/types";
+import {
+  ScheduleSolveError,
+  asSchedulingProject,
+  classifyUnexpectedSolveError,
+  type ScheduleResult,
+  type SolveErrorKind,
+  type SolveProgress,
+} from "./lib/scheduler/types";
 import { importWorkbook } from "./lib/workbookImport";
 import { createWorkbookRevision } from "./lib/workbookRevision";
 import { validateProject } from "./lib/validation";
@@ -18,13 +25,50 @@ function issueTitle(issue: ValidationIssue) {
   return issue.location ? `${issue.location}: ${issue.message}` : issue.message;
 }
 
-function errorKind(message: string): "infeasible" | "error" {
-  const normalized = message.toLowerCase();
-  return normalized.includes("infeasible") ||
-    normalized.includes("no feasible execution profile") ||
-    /status (8|9)\b/.test(normalized)
-    ? "infeasible"
-    : "error";
+interface ErrorPresentation {
+  className: "infeasible" | "error";
+  code: string;
+  title: string;
+}
+
+const ERROR_PRESENTATION: Record<SolveErrorKind, ErrorPresentation> = {
+  "model-error": {
+    className: "error",
+    code: "MODEL / VALIDATION ERROR",
+    title: "The solver model could not be built or processed",
+  },
+  infeasible: {
+    className: "infeasible",
+    code: "NO FEASIBLE SCHEDULE",
+    title: "HiGHS proved the model infeasible within these settings",
+  },
+  "not-proven": {
+    className: "error",
+    code: "OPTIMUM NOT PROVED",
+    title: "HiGHS stopped without proving an optimal schedule",
+  },
+  "wasm-abort": {
+    className: "error",
+    code: "HIGHS / WASM ABORT",
+    title: "HiGHS WebAssembly aborted during the solve",
+  },
+  "potential-model-size": {
+    className: "error",
+    code: "MODEL SIZE RISK",
+    title: "The model may exceed the available WebAssembly memory",
+  },
+};
+
+function errorKind(error: unknown): SolveErrorKind {
+  if (error instanceof ScheduleSolveError) return error.kind;
+  const message = error instanceof Error ? error.message : String(error);
+  return classifyUnexpectedSolveError(message);
+}
+
+function normalizeSolveError(error: unknown): ScheduleSolveError {
+  if (error instanceof ScheduleSolveError) return error;
+  const message = error instanceof Error ? error.message : "The schedule could not be calculated.";
+  return new ScheduleSolveError(errorKind(error), message);
 }
 
 function App() {
@@ -38,7 +82,7 @@ function App() {
   const [schedule, setSchedule] = useState<ScheduleResult | null>(null);
   const [isSolving, setIsSolving] = useState(false);
   const [solveProgress, setSolveProgress] = useState<SolveProgress | null>(null);
-  const [solveError, setSolveError] = useState<string | null>(null);
+  const [solveError, setSolveError] = useState<ScheduleSolveError | null>(null);
   const [solveDurationMs, setSolveDurationMs] = useState<number | null>(null);
   const [lastRunSettings, setLastRunSettings] = useState<RunSettings | null>(null);
   const [horizonDays, setHorizonDays] = useState("0");
@@ -194,7 +238,7 @@ function App() {
       setSolveProgress(null);
     } catch (error) {
       if (!(error instanceof DOMException && error.name === "AbortError")) {
-        setSolveError(error instanceof Error ? error.message : "The schedule could not be calculated.");
+        setSolveError(normalizeSolveError(error));
       }
     } finally {
       if (solveAbortRef.current === controller) solveAbortRef.current = null;
@@ -213,6 +257,7 @@ function App() {
   const warnings = result?.issues.filter((issue) => issue.severity === "warning") ?? [];
   const project = result && editable ? asSchedulingProject(result.data) : null;
   const currentErrorKind = solveError ? errorKind(solveError) : null;
+  const currentErrorPresentation = currentErrorKind ? ERROR_PRESENTATION[currentErrorKind] : null;
 
   return (
     <main className="app-shell">
@@ -337,8 +382,8 @@ function App() {
         {result?.isValid && isSolving && (
           <div className="terminal-state solving"><span className="large-spinner" aria-hidden="true" /><div><span className="state-code">SOLVER ACTIVE</span><h2>Calculating the optimized schedule</h2><p>{solveProgress?.message ?? "Preparing the scheduling model…"}</p></div></div>
         )}
-        {result?.isValid && solveError && (
-          <div className={`terminal-state ${currentErrorKind}`} role="alert"><span className="state-icon" aria-hidden="true">{currentErrorKind === "infeasible" ? "∅" : "!"}</span><div><span className="state-code">{currentErrorKind === "infeasible" ? "NO FEASIBLE SCHEDULE" : "SOLVER ERROR"}</span><h2>{currentErrorKind === "infeasible" ? "The model is infeasible within these settings" : "The schedule could not be calculated"}</h2><p>{solveError}</p><button className="secondary-button retry-button" type="button" onClick={calculateSchedule}>Try again</button></div></div>
+        {result?.isValid && solveError && currentErrorPresentation && (
+          <div className={`terminal-state ${currentErrorPresentation.className}`} role="alert"><span className="state-icon" aria-hidden="true">{currentErrorKind === "infeasible" ? "∅" : "!"}</span><div><span className="state-code">{currentErrorPresentation.code}</span><h2>{currentErrorPresentation.title}</h2><p>{solveError.message}</p><button className="secondary-button retry-button" type="button" onClick={calculateSchedule}>Try again</button></div></div>
         )}
         {project && schedule && result?.isValid && lastRunSettings && (
           <ScheduleResults

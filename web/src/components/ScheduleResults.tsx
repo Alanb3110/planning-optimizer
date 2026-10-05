@@ -247,6 +247,25 @@ export function ScheduleResults({ project, result, validation, settings, solveDu
         </div>
       </section>
 
+      {result.diagnostics && (
+        <section className="result-section" aria-labelledby="solver-diagnostics-title">
+          <div className="section-heading">
+            <div><span className="section-kicker">Technical diagnostics</span><h3 id="solver-diagnostics-title">Solver model</h3></div>
+          </div>
+          <div className="model-counts" aria-label="Technical solver diagnostics">
+            <div><strong>{result.diagnostics.activeActivities}</strong><span>active activities</span></div>
+            <div><strong>{result.diagnostics.horizonH}</strong><span>horizon hours</span></div>
+            <div><strong>{result.diagnostics.executionProfiles}</strong><span>execution profiles</span></div>
+            <div><strong>{result.diagnostics.columns}</strong><span>columns</span></div>
+            <div><strong>{result.diagnostics.rows}</strong><span>rows</span></div>
+            <div><strong>{result.diagnostics.nonzeros}</strong><span>nonzeros</span></div>
+            <div><strong>{result.diagnostics.optimizationPasses}</strong><span>optimization passes</span></div>
+            <div><strong>{(result.diagnostics.estimatedModelBytes / (1024 * 1024)).toFixed(3)}</strong><span>estimated MiB</span></div>
+          </div>
+          <p className="explanation-caveat">Estimated model size is the sum of the JavaScript typed arrays passed to HiGHS. It excludes WebAssembly/HiGHS internal structures, solver workspaces and copies.</p>
+        </section>
+      )}
+
       <GanttChart rows={rows} result={result} timezone={timezone} />
 
       {explanation && (

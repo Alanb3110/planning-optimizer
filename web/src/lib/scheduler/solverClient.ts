@@ -1,10 +1,13 @@
-import type {
-  ScheduleResult,
-  SchedulingProject,
-  SolveOptions,
-  SolveProgress,
-  SolveWorkerRequest,
-  SolveWorkerResponse,
+import {
+  ScheduleSolveError,
+  solveFailureFrom,
+  type ScheduleResult,
+  type SchedulingProject,
+  type SolveDiagnostics,
+  type SolveOptions,
+  type SolveProgress,
+  type SolveWorkerRequest,
+  type SolveWorkerResponse,
 } from "./types";
 
 export function solveScheduleInWorker(
@@ -23,6 +26,7 @@ export function solveScheduleInWorker(
       name: "ait-planning-optimizer",
     });
     let finished = false;
+    let latestDiagnostics: SolveDiagnostics | undefined;
     const finish = () => {
       if (finished) return;
       finished = true;
@@ -36,18 +40,27 @@ export function solveScheduleInWorker(
     signal?.addEventListener("abort", abort, { once: true });
     worker.onerror = (event) => {
       finish();
-      reject(new Error(event.message || "The scheduling worker failed."));
+      const failure = solveFailureFrom(
+        new Error(event.message || "The scheduling worker failed."),
+        latestDiagnostics,
+      );
+      reject(new ScheduleSolveError(failure.kind, failure.message, failure.diagnostics));
     };
     worker.onmessage = (event: MessageEvent<SolveWorkerResponse>) => {
       const response = event.data;
       if (response.type === "progress") {
+        latestDiagnostics = response.progress.diagnostics ?? latestDiagnostics;
         onProgress?.(response.progress);
       } else if (response.type === "result") {
         finish();
         resolve(response.result);
       } else {
         finish();
-        reject(new Error(response.message));
+        reject(new ScheduleSolveError(
+          response.failure.kind,
+          response.failure.message,
+          response.failure.diagnostics ?? latestDiagnostics,
+        ));
       }
     };
     const request: SolveWorkerRequest = { type: "solve", project, options };

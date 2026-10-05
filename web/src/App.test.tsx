@@ -4,7 +4,7 @@ import App, { errorKind } from "./App";
 import type { WorkbookImportResult } from "./lib/model";
 import { fetchLocalArrayBuffer } from "./lib/localAsset";
 import { solveScheduleInWorker } from "./lib/scheduler/solverClient";
-import type { ScheduleResult } from "./lib/scheduler/types";
+import { ScheduleSolveError, solveFailureFrom, type ScheduleResult } from "./lib/scheduler/types";
 import { importWorkbook } from "./lib/workbookImport";
 import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
@@ -57,6 +57,16 @@ const schedule: ScheduleResult = {
   horizonH: 1016,
   optimal: true,
   solverMessage: "HiGHS test: optimal",
+  diagnostics: {
+    activeActivities: 2,
+    horizonH: 1016,
+    executionProfiles: 42,
+    columns: 50,
+    rows: 20,
+    nonzeros: 120,
+    optimizationPasses: 2,
+    estimatedModelBytes: 4096,
+  },
   activities: {
     ROUTE_SERVICES: { activityId: "ROUTE_SERVICES", startH: 32, endH: 58, workSlots: [32, 33, 34, 35, 36, 37, 38, 39, 56, 57], segments: [[32, 40], [56, 58]] },
     POSITION_SKID: { activityId: "POSITION_SKID", startH: 80, endH: 88, workSlots: [80, 81, 82, 83, 84, 85, 86, 87], segments: [[80, 88]] },
@@ -299,7 +309,9 @@ describe("AIT Planning Optimizer workspace", () => {
 
   it("shows an explicit infeasible state and keeps retry available", async () => {
     vi.mocked(importWorkbook).mockResolvedValue(importedWorkbook);
-    vi.mocked(solveScheduleInWorker).mockRejectedValue(new Error("HiGHS did not prove an optimal schedule (status 8)."));
+    vi.mocked(solveScheduleInWorker).mockRejectedValue(
+      new ScheduleSolveError("infeasible", "HiGHS proved the model infeasible (status infeasible, code 8)."),
+    );
     render(<App />);
     fireEvent.change(screen.getByLabelText("Select a local .xlsx file"), {
       target: { files: [new File(["synthetic"], "synthetic_project.xlsx")] },
@@ -308,6 +320,25 @@ describe("AIT Planning Optimizer workspace", () => {
     fireEvent.click(screen.getByRole("button", { name: "Calculate schedule" }));
     expect(await screen.findByText(/no feasible schedule/i)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Try again" })).toBeInTheDocument();
+  });
+
+  it("shows WASM abort diagnostics without calling the model infeasible", async () => {
+    vi.mocked(importWorkbook).mockResolvedValue(importedWorkbook);
+    const failure = solveFailureFrom(
+      new Error("Aborted(). Build with -sASSERTIONS for more info."),
+      schedule.diagnostics,
+    );
+    vi.mocked(solveScheduleInWorker).mockRejectedValue(
+      new ScheduleSolveError(failure.kind, failure.message, failure.diagnostics),
+    );
+    render(<App />);
+    selectWorkbook("synthetic_project.xlsx");
+    await screen.findByText("Workbook accepted");
+    fireEvent.click(screen.getByRole("button", { name: "Calculate schedule" }));
+    expect(await screen.findByText("HIGHS / WASM ABORT")).toBeInTheDocument();
+    expect(screen.getByText(/execution profiles=42/)).toBeInTheDocument();
+    expect(screen.getByText(/not evidence that the scheduling model is infeasible/i)).toBeInTheDocument();
+    expect(screen.queryByText("NO FEASIBLE SCHEDULE")).not.toBeInTheDocument();
   });
 
   it("discards both a late import result and a late import error after clear", async () => {
@@ -398,9 +429,11 @@ describe("AIT Planning Optimizer workspace", () => {
 });
 
 describe("solver error classification", () => {
-  it("separates infeasible outcomes from general errors", () => {
-    expect(errorKind("No feasible execution profile for ACT_A.")).toBe("infeasible");
-    expect(errorKind("HiGHS status 9")).toBe("infeasible");
-    expect(errorKind("Worker failed to load")).toBe("error");
+  it("keeps model, proof and WebAssembly failures distinct", () => {
+    expect(errorKind(new ScheduleSolveError("infeasible", "Proven infeasible"))).toBe("infeasible");
+    expect(errorKind(new Error("Aborted(). Build with -sASSERTIONS for more info."))).toBe("wasm-abort");
+    expect(errorKind(new Error("HiGHS time limit reached before the optimum was proved."))).toBe("not-proven");
+    expect(errorKind(new Error("RuntimeError: memory access out of bounds"))).toBe("potential-model-size");
+    expect(errorKind(new Error("Worker failed to load"))).toBe("model-error");
   });
 });
